@@ -1,13 +1,16 @@
 import React, { useEffect, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../lib/AuthContext'
 import FullCalendar from '@fullcalendar/react'
 import dayGridPlugin from '@fullcalendar/daygrid'
 import timeGridPlugin from '@fullcalendar/timegrid'
+import interactionPlugin from '@fullcalendar/interaction'
 import api from '../lib/api'
 
 export default function Events() {
+  const navigate = useNavigate()
   const [events, setEvents] = useState([])
+  const [navigating, setNavigating] = useState(false)
   const [eventList, setEventList] = useState([])
   const [loading, setLoading] = useState(true)
   const [registeredEventIds, setRegisteredEventIds] = useState(() => new Set())
@@ -109,13 +112,21 @@ export default function Events() {
       </div>
 
       {/* Calendar View */}
-      <div className="card mb-8">
+      <div className="card mb-8 relative">
+        {navigating && (
+          <div className="absolute inset-0 bg-white/60 backdrop-blur-sm z-10 flex items-center justify-center rounded-lg">
+            <div className="flex items-center gap-2 bg-white px-4 py-2 rounded-full shadow-md text-sm font-medium text-blue-700">
+              <span className="spinner w-4 h-4 border-2 border-blue-200 border-t-blue-600"></span>
+              Redirecting to registration...
+            </div>
+          </div>
+        )}
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-xl font-semibold">Event Calendar</h2>
-          <div className="text-xs text-gray-500">Click an event to register (if eligible)</div>
+          <div className="text-xs text-gray-500">Click a date or an event to register (if eligible)</div>
         </div>
         <FullCalendar 
-          plugins={[dayGridPlugin, timeGridPlugin]} 
+          plugins={[dayGridPlugin, timeGridPlugin, interactionPlugin]}
           initialView="dayGridMonth" 
           events={events} 
           height="auto"
@@ -124,10 +135,45 @@ export default function Events() {
             center: 'title',
             right: 'dayGridMonth,timeGridWeek'
           }}
+          dayCellClassNames={(arg) => {
+            const date = arg.date
+            const dateStr = new Date(date.getTime() - (date.getTimezoneOffset() * 60000)).toISOString().split('T')[0]
+            const hasEvent = events.some(e => {
+              if (!e.start) return false
+              const eDate = new Date(e.start)
+              const eDateStr = new Date(eDate.getTime() - (eDate.getTimezoneOffset() * 60000)).toISOString().split('T')[0]
+              return eDateStr === dateStr
+            })
+            if (hasEvent) {
+              return ['cursor-pointer', 'hover:bg-blue-50/50', 'transition-colors']
+            }
+            return []
+          }}
+          dateClick={(info) => {
+            const date = info.date
+            const dateStr = new Date(date.getTime() - (date.getTimezoneOffset() * 60000)).toISOString().split('T')[0]
+            // Find the first event on this date
+            const firstEvent = eventList.find(e => {
+              if (!e.startTime) return false
+              const eDate = new Date(e.startTime)
+              const eDateStr = new Date(eDate.getTime() - (eDate.getTimezoneOffset() * 60000)).toISOString().split('T')[0]
+              return eDateStr === dateStr
+            })
+
+            if (firstEvent && canOpenEventPage(firstEvent)) {
+              setNavigating(true)
+              setTimeout(() => {
+                navigate(`/register/${firstEvent.id}`)
+              }, 400) // slight delay to show loading state
+            }
+          }}
           eventClick={(info) => {
             const event = eventList.find(e => e.id === info.event.id)
             if (event && canOpenEventPage(event)) {
-              window.location.href = `/register/${event.id}`
+              setNavigating(true)
+              setTimeout(() => {
+                navigate(`/register/${event.id}`)
+              }, 400)
             }
           }}
         />
