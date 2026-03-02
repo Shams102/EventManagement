@@ -167,23 +167,23 @@ export default function Dashboard() {
                 </div>
               </div>
             ) : registrations.length === 0 ? (
-              <div className="text-gray-500 text-sm">No registrations yet.</div>
+              <div className="text-slate-500 text-sm">No registrations yet.</div>
             ) : (
-              <div className="space-y-6">
+              <div className="space-y-4">
                 {registrations.map(ev => (
-                  <div key={ev.eventId} className="border border-slate-700 rounded-lg p-6 hover:shadow-md transition-shadow bg-slate-800/80 backdrop-blur-sm">
+                  <div key={ev.eventId} className="border border-slate-700 rounded-lg p-4 hover:shadow-md transition-shadow bg-[#0b0f19]">
                     <div className="flex items-start justify-between mb-2">
                       <h3 className="font-medium text-slate-100">{ev.title}</h3>
                       <span className="bg-violet-600/20 text-violet-300 border border-violet-500/20 text-xs px-2 py-1 rounded-full">Registered</span>
                     </div>
-                    <div className="text-xs text-gray-500">
+                    <div className="text-xs text-slate-400">
                       {ev.startTime && (
                         <>
                           📅 {new Date(ev.startTime).toLocaleDateString()} · {new Date(ev.startTime).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}
                         </>
                       )}
                     </div>
-                    <div className="text-xs text-gray-500 mt-1">
+                    <div className="text-xs text-slate-400 mt-1">
                       📍 {ev.location || 'TBD'}
                     </div>
                   </div>
@@ -209,18 +209,18 @@ export default function Dashboard() {
                 </div>
               </div>
             ) : createdEvents.length === 0 ? (
-              <div className="text-gray-500 text-sm">No events created yet.</div>
+              <div className="text-slate-500 text-sm">No events created yet.</div>
             ) : (
-              <div className="space-y-6">
+              <div className="space-y-4">
                 {createdEvents.map(ev => {
                   const start = ev.startTime ? new Date(ev.startTime) : null
                   const editable = start && (start.getTime() - now.getTime()) > 2 * 24 * 60 * 60 * 1000
                   return (
-                    <div key={ev.id} className="border border-slate-700 rounded-lg p-6 hover:shadow-md transition-shadow bg-slate-800/80 backdrop-blur-sm">
+                    <div key={ev.id} className="border border-slate-700 rounded-lg p-4 hover:shadow-md transition-shadow bg-[#0b0f19]">
                       <div className="flex items-start justify-between mb-2">
                         <div>
                           <h3 className="font-medium text-slate-100">{ev.title}</h3>
-                          <div className="text-xs text-gray-500">
+                          <div className="text-xs text-slate-400">
                             {ev.startTime && (
                               <>
                                 📅 {new Date(ev.startTime).toLocaleDateString()} · {new Date(ev.startTime).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}
@@ -228,11 +228,11 @@ export default function Dashboard() {
                             )}
                           </div>
                         </div>
-                        <span className="text-xs px-2 py-1 rounded-full bg-gray-100 text-gray-700">
+                        <span className="text-xs px-2 py-1 rounded-full bg-slate-800 text-slate-300 border border-slate-700">
                           {editable ? 'Editable' : 'Locked (<2 days)'}
                         </span>
                       </div>
-                      <div className="text-xs text-gray-500 mt-1">
+                      <div className="text-xs text-slate-400 mt-1">
                         📍 {ev.location || 'TBD'}
                       </div>
                       <div className="mt-3 flex space-x-2">
@@ -247,7 +247,7 @@ export default function Dashboard() {
                         <button
                           type="button"
                           className="btn btn-primary btn-sm"
-                          onClick={() => navigate(`/register/${ev.id}`)}
+                          onClick={() => navigate(`/events/register/${ev.id}`)}
                         >
                           Notifications
                         </button>
@@ -268,11 +268,11 @@ export default function Dashboard() {
               <button type="button" className="btn btn-secondary btn-sm" onClick={() => navigate('/book-room')}>New</button>
             </div>
             {loading ? (
-              <div className="text-gray-500 text-sm">Loading...</div>
+              <div className="text-slate-500 text-sm">Loading...</div>
             ) : bookings.length === 0 ? (
-              <div className="text-gray-500 text-sm">No room requests yet.</div>
+              <div className="text-slate-500 text-sm">No room requests yet.</div>
             ) : (
-              <div className="space-y-6">
+              <div className="space-y-4">
                 {bookings.map(b => {
                   const start = b.start ? new Date(b.start) : null
                   const canCancel = b.status === 'PENDING' && start && (start.getTime() - now.getTime()) > 2 * 24 * 60 * 60 * 1000
@@ -285,22 +285,22 @@ export default function Dashboard() {
                     }
                   }
                   return (
-                    <div key={b.id} className="border border-slate-700 rounded-lg p-6 hover:shadow-md transition-shadow bg-slate-800/80 backdrop-blur-sm">
+                    <div key={b.id} className="border border-slate-700 rounded-lg p-4 hover:shadow-md transition-shadow bg-[#0b0f19]">
                       <div className="flex items-start justify-between mb-2">
                         <div>
                           <h3 className="font-medium text-slate-100">{b.eventTitle || 'Meeting'}</h3>
-                          <p className="text-sm text-gray-400">Allocated: {b.allocatedRoom || 'TBD'}</p>
+                          <p className="text-sm text-slate-400">Allocated: {b.allocatedRoom || 'TBD'}</p>
                         </div>
                         <span className={`text-xs px-2 py-1 rounded-full ${getStatusBadge(b.status)}`}>
                           {(b.status || '').charAt(0) + (b.status || '').slice(1).toLowerCase()}
                         </span>
                       </div>
-                      <div className="text-xs text-gray-500">
+                      <div className="text-xs text-slate-400">
                         {b.start && (
                           <>📅 {new Date(b.start).toLocaleDateString()} · {new Date(b.start).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}</>
                         )}
                       </div>
-                      <div className="text-xs text-gray-500 mt-1">
+                      <div className="text-xs text-slate-400 mt-1">
                         Preferences: {b.pref1} → {b.pref2} → {b.pref3}
                       </div>
                       <div className="mt-3 flex space-x-2">
@@ -324,15 +324,15 @@ export default function Dashboard() {
 
       {/* Quick Actions */}
       <div className="card mt-6">
-        <h2 className="text-xl font-semibold mb-4">Quick Actions</h2>
+        <h2 className="text-xl font-semibold mb-4 text-slate-100">Quick Actions</h2>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <a href="/events" className="btn btn-primary w-full shadow-[0_0_15px_rgba(124,58,237,0.3)] border border-violet-500/50">
+          <a href="/events" className="btn btn-primary w-full shadow-[0_0_15px_rgba(124,58,237,0.3)]">
             Browse Events
           </a>
-          <a href="/book-room" className="btn btn-secondary w-full border border-slate-600">
+          <a href="/book-room" className="btn btn-secondary w-full">
             Book a Room
           </a>
-          <a href="/bookings" className="btn btn-secondary w-full border border-slate-600">
+          <a href="/bookings" className="btn btn-secondary w-full">
             View All Bookings
           </a>
         </div>

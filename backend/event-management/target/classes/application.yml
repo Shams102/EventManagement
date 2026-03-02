@@ -3,12 +3,10 @@ server:
 
 spring:
   datasource:
-    url: jdbc:h2:mem:campus_events;DB_CLOSE_DELAY=-1
-    username: sa
-    password: sa
-    driver-class-name: org.h2.Driver
+    url: jdbc:mysql://localhost:3306/campus_events?createDatabaseIfNotExist=true&useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
+    username: root
+    password: 652005
   jpa:
-    database-platform: org.hibernate.dialect.H2Dialect
     hibernate:
       ddl-auto: update
     properties:
@@ -29,7 +27,7 @@ spring:
 
 app:
   security:
-    jwtSecret: ${APP_SECURITY_JWTSECRET:change-this-dev-secret-at-least-32-chars-long}
+    jwtSecret: change-this-dev-secret-at-least-32-chars-long
     jwtExpirationMs: 3600000
   notifications:
     twilio:

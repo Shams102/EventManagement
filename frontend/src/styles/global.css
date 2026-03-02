@@ -13,8 +13,8 @@
   body {
     font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
     line-height: 1.6;
-    color: #f8fafc;
-    background-color: #0f172a;
+    color: #e2e8f0;
+    background-color: #0b0f19;
   }
 }
 
@@ -58,7 +58,7 @@
   .shadow-soft { box-shadow: var(--shadow); }
 
   .card {
-    @apply bg-slate-800/80 backdrop-blur-md border border-slate-700 rounded-xl p-4;
+    @apply bg-[#171c28] border border-slate-800 rounded-xl p-4;
     box-shadow: var(--shadow);
     transition: transform .15s ease, box-shadow .15s ease;
   }
@@ -84,7 +84,7 @@
   }
 
   .btn-secondary {
-    @apply bg-slate-700 text-slate-200 border border-slate-600 hover:bg-slate-600;
+    @apply bg-slate-800 text-slate-200 border border-slate-700 hover:bg-slate-700;
   }
 
   .btn-success {
@@ -117,12 +117,12 @@
   }
 
   .form-input {
-    @apply w-full rounded-md border border-slate-600 bg-slate-800/90 text-slate-200 px-3 py-2 text-sm shadow-sm;
+    @apply w-full rounded-md border border-slate-700 bg-slate-900/90 text-slate-200 px-3 py-2 text-sm shadow-sm;
     @apply focus:outline-none focus:ring-2 focus:ring-violet-500/50 focus:border-violet-500;
   }
 
   .form-select {
-    @apply w-full rounded-md border border-slate-600 bg-slate-800/90 text-slate-200 px-3 py-2 text-sm shadow-sm;
+    @apply w-full rounded-md border border-slate-700 bg-slate-900/90 text-slate-200 px-3 py-2 text-sm shadow-sm;
     @apply focus:outline-none focus:ring-2 focus:ring-violet-500/50 focus:border-violet-500;
   }
 
@@ -212,12 +212,13 @@
 }
 
 .fc-event {
+  cursor: pointer;
   transition: transform 0.15s ease, box-shadow 0.15s ease;
 }
 
 .fc-event:hover {
   transform: scale(1.02);
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.5), 0 2px 4px -1px rgba(0, 0, 0, 0.3);
   z-index: 10;
 }
 
