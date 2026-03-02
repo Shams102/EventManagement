@@ -78,8 +78,8 @@ export default function Dashboard() {
     <div>
       <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">Dashboard</h1>
-          <p className="text-gray-600">Welcome back, {user?.sub}!</p>
+          <h1 className="text-3xl font-bold text-slate-100">Dashboard</h1>
+          <p className="text-slate-400">Welcome back, {user?.sub}!</p>
         </div>
         <div className="flex gap-2">
           <button type="button" className="btn btn-secondary btn-sm" onClick={() => navigate('/events')}>Browse Events</button>
@@ -98,10 +98,10 @@ export default function Dashboard() {
           <div className="card">
             <div className="flex items-start justify-between">
               <div>
-                <div className="text-sm text-gray-600">Upcoming Registrations</div>
-                <div className="text-3xl font-bold text-gray-900 mt-1">{upcomingRegs.length}</div>
+                <div className="text-sm text-slate-400">Upcoming Registrations</div>
+                <div className="text-3xl font-bold text-slate-100 mt-1">{upcomingRegs.length}</div>
               </div>
-              <div className="h-10 w-10 rounded-lg" style={{ background: 'rgba(59,130,246,0.12)' }}>
+              <div className="h-10 w-10 rounded-lg bg-violet-500/10 border border-violet-500/20">
                 <div className="h-10 w-10 flex items-center justify-center text-lg">📌</div>
               </div>
             </div>
@@ -111,10 +111,10 @@ export default function Dashboard() {
           <div className="card">
             <div className="flex items-start justify-between">
               <div>
-                <div className="text-sm text-gray-600">Events Created</div>
-                <div className="text-3xl font-bold text-gray-900 mt-1">{createdEvents.length}</div>
+                <div className="text-sm text-slate-400">Events Created</div>
+                <div className="text-3xl font-bold text-slate-100 mt-1">{createdEvents.length}</div>
               </div>
-              <div className="h-10 w-10 rounded-lg" style={{ background: 'rgba(16,185,129,0.12)' }}>
+              <div className="h-10 w-10 rounded-lg bg-emerald-500/10 border border-emerald-500/20">
                 <div className="h-10 w-10 flex items-center justify-center text-lg">🗓️</div>
               </div>
             </div>
@@ -124,10 +124,10 @@ export default function Dashboard() {
           <div className="card">
             <div className="flex items-start justify-between">
               <div>
-                <div className="text-sm text-gray-600">Room Requests</div>
-                <div className="text-3xl font-bold text-gray-900 mt-1">{bookings.length}</div>
+                <div className="text-sm text-slate-400">Room Requests</div>
+                <div className="text-3xl font-bold text-slate-100 mt-1">{bookings.length}</div>
               </div>
-              <div className="h-10 w-10 rounded-lg" style={{ background: 'rgba(245,158,11,0.16)' }}>
+              <div className="h-10 w-10 rounded-lg bg-amber-500/10 border border-amber-500/20">
                 <div className="h-10 w-10 flex items-center justify-center text-lg">🏢</div>
               </div>
             </div>
@@ -137,10 +137,10 @@ export default function Dashboard() {
           <div className="card">
             <div className="flex items-start justify-between">
               <div>
-                <div className="text-sm text-gray-600">Past Events</div>
-                <div className="text-3xl font-bold text-gray-900 mt-1">{pastRegs.length}</div>
+                <div className="text-sm text-slate-400">Past Events</div>
+                <div className="text-3xl font-bold text-slate-100 mt-1">{pastRegs.length}</div>
               </div>
-              <div className="h-10 w-10 rounded-lg" style={{ background: 'rgba(100,116,139,0.14)' }}>
+              <div className="h-10 w-10 rounded-lg bg-slate-500/10 border border-slate-500/20">
                 <div className="h-10 w-10 flex items-center justify-center text-lg">✅</div>
               </div>
             </div>
@@ -153,8 +153,8 @@ export default function Dashboard() {
         {showRegistered && (
           <div className="card">
             <div className="flex items-center justify-between mb-4">
-              <h2 className="text-xl font-semibold">My Registered Events</h2>
-              <span className="text-xs px-2 py-1 rounded-full bg-blue-50 text-blue-700 border border-blue-100">
+              <h2 className="text-xl font-semibold text-slate-100">My Registered Events</h2>
+              <span className="text-xs px-2 py-1 rounded-full bg-violet-600/20 text-violet-300 border border-violet-500/20">
                 {registrations.length} total
               </span>
             </div>
@@ -171,10 +171,10 @@ export default function Dashboard() {
             ) : (
               <div className="space-y-6">
                 {registrations.map(ev => (
-                  <div key={ev.eventId} className="border border-gray-200 rounded-lg p-6 hover:shadow-md transition-shadow" style={{ background: 'rgba(255,255,255,0.8)' }}>
+                  <div key={ev.eventId} className="border border-slate-700 rounded-lg p-6 hover:shadow-md transition-shadow bg-slate-800/80 backdrop-blur-sm">
                     <div className="flex items-start justify-between mb-2">
-                      <h3 className="font-medium text-gray-900">{ev.title}</h3>
-                      <span className="bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded-full">Registered</span>
+                      <h3 className="font-medium text-slate-100">{ev.title}</h3>
+                      <span className="bg-violet-600/20 text-violet-300 border border-violet-500/20 text-xs px-2 py-1 rounded-full">Registered</span>
                     </div>
                     <div className="text-xs text-gray-500">
                       {ev.startTime && (
@@ -197,7 +197,7 @@ export default function Dashboard() {
         {showCreatorPanels && (
           <div className="card">
             <div className="flex items-center justify-between mb-4">
-              <h2 className="text-xl font-semibold">Events I Created</h2>
+              <h2 className="text-xl font-semibold text-slate-100">Events I Created</h2>
               <button type="button" className="btn btn-secondary btn-sm" onClick={() => navigate('/events/create')}>Create</button>
             </div>
             {loading ? (
@@ -216,10 +216,10 @@ export default function Dashboard() {
                   const start = ev.startTime ? new Date(ev.startTime) : null
                   const editable = start && (start.getTime() - now.getTime()) > 2 * 24 * 60 * 60 * 1000
                   return (
-                    <div key={ev.id} className="border border-gray-200 rounded-lg p-6 hover:shadow-md transition-shadow" style={{ background: 'rgba(255,255,255,0.8)' }}>
+                    <div key={ev.id} className="border border-slate-700 rounded-lg p-6 hover:shadow-md transition-shadow bg-slate-800/80 backdrop-blur-sm">
                       <div className="flex items-start justify-between mb-2">
                         <div>
-                          <h3 className="font-medium text-gray-900">{ev.title}</h3>
+                          <h3 className="font-medium text-slate-100">{ev.title}</h3>
                           <div className="text-xs text-gray-500">
                             {ev.startTime && (
                               <>
@@ -264,7 +264,7 @@ export default function Dashboard() {
         {showCreatorPanels && (
           <div className="card">
             <div className="flex items-center justify-between mb-4">
-              <h2 className="text-xl font-semibold">My Room Requests</h2>
+              <h2 className="text-xl font-semibold text-slate-100">My Room Requests</h2>
               <button type="button" className="btn btn-secondary btn-sm" onClick={() => navigate('/book-room')}>New</button>
             </div>
             {loading ? (
@@ -285,11 +285,11 @@ export default function Dashboard() {
                     }
                   }
                   return (
-                    <div key={b.id} className="border border-gray-200 rounded-lg p-6 hover:shadow-md transition-shadow" style={{ background: 'rgba(255,255,255,0.8)' }}>
+                    <div key={b.id} className="border border-slate-700 rounded-lg p-6 hover:shadow-md transition-shadow bg-slate-800/80 backdrop-blur-sm">
                       <div className="flex items-start justify-between mb-2">
                         <div>
-                          <h3 className="font-medium text-gray-900">{b.eventTitle || 'Meeting'}</h3>
-                          <p className="text-sm text-gray-600">Allocated: {b.allocatedRoom || 'TBD'}</p>
+                          <h3 className="font-medium text-slate-100">{b.eventTitle || 'Meeting'}</h3>
+                          <p className="text-sm text-gray-400">Allocated: {b.allocatedRoom || 'TBD'}</p>
                         </div>
                         <span className={`text-xs px-2 py-1 rounded-full ${getStatusBadge(b.status)}`}>
                           {(b.status || '').charAt(0) + (b.status || '').slice(1).toLowerCase()}
@@ -326,13 +326,13 @@ export default function Dashboard() {
       <div className="card mt-6">
         <h2 className="text-xl font-semibold mb-4">Quick Actions</h2>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <a href="/events" className="btn btn-primary w-full">
+          <a href="/events" className="btn btn-primary w-full shadow-[0_0_15px_rgba(124,58,237,0.3)] border border-violet-500/50">
             Browse Events
           </a>
-          <a href="/book-room" className="btn btn-secondary w-full">
+          <a href="/book-room" className="btn btn-secondary w-full border border-slate-600">
             Book a Room
           </a>
-          <a href="/bookings" className="btn btn-secondary w-full">
+          <a href="/bookings" className="btn btn-secondary w-full border border-slate-600">
             View All Bookings
           </a>
         </div>

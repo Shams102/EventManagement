@@ -101,8 +101,8 @@ export default function Events() {
     <div>
       <div className="mb-8 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">EventSphere</h1>
-          <p className="text-gray-600">Discover and register for upcoming events</p>
+          <h1 className="text-3xl font-bold text-slate-100">EventSphere</h1>
+          <p className="text-slate-400">Discover and register for upcoming events</p>
         </div>
         {(hasRole('ADMIN') || hasRole('FACULTY') || hasRole('CLUB_ASSOCIATE')) && (
           <div className="flex gap-2">
@@ -114,16 +114,16 @@ export default function Events() {
       {/* Calendar View */}
       <div className="card mb-8 relative">
         {navigating && (
-          <div className="absolute inset-0 bg-white/60 backdrop-blur-sm z-10 flex items-center justify-center rounded-lg">
-            <div className="flex items-center gap-2 bg-white px-4 py-2 rounded-full shadow-md text-sm font-medium text-blue-700">
-              <span className="spinner w-4 h-4 border-2 border-blue-200 border-t-blue-600"></span>
+          <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm z-[70] flex items-center justify-center rounded-xl">
+            <div className="flex items-center gap-3 bg-slate-800 border border-slate-700 px-5 py-3 rounded-full shadow-xl text-sm font-medium text-violet-300">
+              <span className="spinner w-4 h-4 border-2 border-violet-500/30 border-t-violet-500"></span>
               Redirecting to registration...
             </div>
           </div>
         )}
         <div className="flex items-center justify-between mb-4">
-          <h2 className="text-xl font-semibold">Event Calendar</h2>
-          <div className="text-xs text-gray-500">Click a date or an event to register (if eligible)</div>
+          <h2 className="text-xl font-semibold text-slate-100">Event Calendar</h2>
+          <div className="text-xs text-slate-400">Click a date or an event to register (if eligible)</div>
         </div>
         <FullCalendar 
           plugins={[dayGridPlugin, timeGridPlugin, interactionPlugin]}
@@ -145,9 +145,25 @@ export default function Events() {
               return eDateStr === dateStr
             })
             if (hasEvent) {
-              return ['cursor-pointer', 'hover:bg-blue-50/50', 'transition-colors']
+              return ['cursor-pointer', 'hover:bg-slate-800/50', 'transition-colors']
             }
             return []
+          }}
+          eventContent={(arg) => {
+            // Re-find the full event to check eligibility
+            const fullEvent = eventList.find(e => e.id === Number(arg.event.id))
+            const isClickable = fullEvent && canOpenEventPage(fullEvent)
+
+            return (
+              <div className="w-full h-full relative group p-0.5">
+                <div className="overflow-hidden text-ellipsis px-1 text-xs">{arg.event.title}</div>
+                {isClickable && (
+                  <div className="opacity-0 group-hover:opacity-100 transition-opacity bg-slate-800 text-white text-xs px-2 py-1 rounded shadow-lg absolute -top-8 left-1/2 -translate-x-1/2 whitespace-nowrap z-[60] pointer-events-none border border-slate-600">
+                    Click to Register
+                  </div>
+                )}
+              </div>
+            )
           }}
           dateClick={(info) => {
             const date = info.date
@@ -182,44 +198,44 @@ export default function Events() {
       {/* Event List */}
       <div className="card">
         <div className="flex items-center justify-between mb-6">
-          <h2 className="text-xl font-semibold">Upcoming Events</h2>
-          <span className="text-xs px-2 py-1 rounded-full bg-gray-50 text-gray-700 border border-gray-200">
+          <h2 className="text-xl font-semibold text-slate-100">Upcoming Events</h2>
+          <span className="text-xs px-2 py-1 rounded-full bg-slate-800 text-slate-300 border border-slate-700">
             Next 15 days: {upcomingEvents.length}
           </span>
         </div>
         {upcomingEvents.length === 0 ? (
           <div className="text-center py-8">
             <div className="text-4xl mb-4">📅</div>
-            <p className="text-gray-600">No upcoming events in the next 15 days</p>
+            <p className="text-slate-400">No upcoming events in the next 15 days</p>
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {upcomingEvents.map(event => (
-              <div key={event.id} className="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow" style={{ background: 'rgba(255,255,255,0.8)' }}>
+              <div key={event.id} className="border border-slate-700 rounded-lg p-4 hover:shadow-md transition-shadow bg-slate-800/80 backdrop-blur-md">
                 <div className="flex items-start justify-between mb-3">
-                  <h3 className="text-lg font-semibold text-gray-900">{event.title}</h3>
-                  <span className="bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded-full">
+                  <h3 className="text-lg font-semibold text-slate-100">{event.title}</h3>
+                  <span className="bg-violet-600/20 text-violet-300 border border-violet-500/20 text-xs px-2 py-1 rounded-full">
                     Public
                   </span>
                 </div>
                 
                 {event.description && (
-                  <p className="text-gray-600 mb-4 text-sm">{event.description}</p>
+                  <p className="text-slate-400 mb-4 text-sm">{event.description}</p>
                 )}
                 
                 <div className="space-y-2 mb-4">
-                  <div className="flex items-center text-sm text-gray-500">
+                  <div className="flex items-center text-sm text-slate-400">
                     <span className="mr-2">📅</span>
                     <span>{new Date(event.startTime).toLocaleDateString()}</span>
                   </div>
-                  <div className="flex items-center text-sm text-gray-500">
+                  <div className="flex items-center text-sm text-slate-400">
                     <span className="mr-2">🕐</span>
                     <span>
                       {new Date(event.startTime).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})} - 
                       {new Date(event.endTime).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
                     </span>
                   </div>
-                  <div className="flex items-center text-sm text-gray-500">
+                  <div className="flex items-center text-sm text-slate-400">
                     <span className="mr-2">📍</span>
                     <span>Location: {event.location || 'TBD'}</span>
                   </div>
@@ -234,9 +250,9 @@ export default function Events() {
                   </Link>
                 ) : (
                   registeredEventIds.has(Number(event.id)) ? (
-                    <button className="btn btn-secondary btn-sm w-full" disabled>
-                      Registered
-                    </button>
+                    <div className="flex items-center justify-center gap-2 bg-emerald-50 text-emerald-700 border border-emerald-200 rounded-md py-1.5 text-sm font-medium w-full">
+                      ✓ Already Registered
+                    </div>
                   ) : canOpenEventPage(event) ? (
                     <Link to={`/register/${event.id}`} className="btn btn-secondary btn-sm w-full">
                       View Event

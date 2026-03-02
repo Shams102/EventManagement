@@ -5,6 +5,7 @@ import NotificationBell from './notifications/NotificationBell'
 import NotificationsDrawer from './notifications/NotificationsDrawer'
 import BroadcastModal from './BroadcastModal'
 import Toast from './Toast'
+import { Home, LayoutDashboard, Calendar, CalendarCheck, DoorOpen, ShieldCheck, CheckSquare } from 'lucide-react'
 
 export default function Layout({ children }) {
   const { user, logout, hasRole } = useAuth()
@@ -17,129 +18,129 @@ export default function Layout({ children }) {
 
   const links = useMemo(() => {
     const items = [
-      { to: '/', label: 'Home', show: true },
-      { to: '/dashboard', label: 'Dashboard', show: !!user },
-      { to: '/events', label: 'Events', show: true },
-      { to: '/bookings', label: 'Bookings', show: !!user && (hasRole('FACULTY') || hasRole('CLUB_ASSOCIATE') || hasRole('ADMIN')) },
-      { to: '/enhanced-book-room', label: 'Book Room', show: !!user && (hasRole('FACULTY') || hasRole('CLUB_ASSOCIATE') || hasRole('ADMIN')) },
-      { to: '/admin/role-requests', label: 'Admin', show: !!user && hasRole('ADMIN') },
-      { to: '/admin/room-approvals', label: 'Room Approvals', show: !!user && hasRole('ADMIN') },
+      { to: '/', label: 'Home', icon: Home, show: true },
+      { to: '/dashboard', label: 'Dashboard', icon: LayoutDashboard, show: !!user },
+      { to: '/events', label: 'Events', icon: Calendar, show: true },
+      { to: '/bookings', label: 'Bookings', icon: CalendarCheck, show: !!user && (hasRole('FACULTY') || hasRole('CLUB_ASSOCIATE') || hasRole('ADMIN')) },
+      { to: '/enhanced-book-room', label: 'Book Room', icon: DoorOpen, show: !!user && (hasRole('FACULTY') || hasRole('CLUB_ASSOCIATE') || hasRole('ADMIN')) },
+      { to: '/admin/role-requests', label: 'Admin', icon: ShieldCheck, show: !!user && hasRole('ADMIN') },
+      { to: '/admin/room-approvals', label: 'Room Approvals', icon: CheckSquare, show: !!user && hasRole('ADMIN') },
     ]
     return items.filter(i => i.show)
   }, [user, hasRole])
   
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <header className="bg-slate-900 shadow-sm border-b border-slate-800 sticky top-0">
-        <div className="container">
-          <div className="flex items-center justify-between h-14">
+    <div className="min-h-screen bg-slate-900 flex flex-col md:flex-row">
+      {/* Sidebar (Desktop) / Header (Mobile) */}
+      <header className="bg-slate-900/80 backdrop-blur-md shadow-sm border-b md:border-b-0 md:border-r border-slate-700 md:sticky md:top-0 md:h-screen md:w-64 md:flex-shrink-0 z-50">
+        <div className="flex flex-col h-full">
+          <div className="flex items-center justify-between h-16 px-4 md:px-6">
             {/* Logo */}
             <div className="flex items-center">
-              <Link to="/" className="inline-flex items-center gap-2 font-bold text-white text-lg">
+              <Link to="/" className="inline-flex items-center gap-2 font-bold text-violet-400 text-lg">
                 🎓 EventSphere
               </Link>
             </div>
             
-            {/* Navigation */}
-            <nav className="hidden md:flex items-center space-x-1 ml-6 flex-1" role="navigation" aria-label="Primary navigation">
-              {links.map(l => (
-                <Link
-                  key={l.to}
-                  to={l.to}
-                  className={`px-3 py-2 rounded-md text-sm font-medium transition-colors ${
-                    isActive(l.to)
-                      ? 'bg-indigo-600 text-white'
-                      : 'text-slate-300 hover:bg-slate-800 hover:text-white'
-                  }`}
-                  aria-current={isActive(l.to) ? 'page' : undefined}
-                >
-                  {l.label}
-                </Link>
-              ))}
-            </nav>
-            
-            {/* User Menu */}
-            <div className="flex items-center space-x-4">
+            {/* Mobile Menu Button */}
+            <div className="flex items-center md:hidden space-x-4">
+              <div className="text-slate-300">
+                <NotificationBell open={notificationsOpen} onOpen={() => setNotificationsOpen(true)} />
+              </div>
               <button
                 type="button"
-                className="md:hidden px-3 py-1.5 bg-slate-800 text-slate-200 rounded-md text-sm"
+                className="px-3 py-1.5 bg-slate-800 text-slate-200 rounded-md text-sm border border-slate-700"
                 onClick={() => setMobileOpen(v => !v)}
                 aria-label="Open menu"
               >
                 Menu
               </button>
-              {hasRole('ADMIN') && (
-                <button className="text-slate-300 hover:text-white" title="Broadcast" onClick={() => setBroadcastOpen(true)} aria-label="Open broadcast dialog">📣</button>
-              )}
-              <div className="text-slate-300">
-                <NotificationBell open={notificationsOpen} onOpen={() => setNotificationsOpen(true)} />
+            </div>
+          </div>
+
+          {/* Desktop Navigation / User Info */}
+          <div className={`flex-1 overflow-y-auto ${mobileOpen ? 'block' : 'hidden'} md:block px-4 py-4 md:px-6`}>
+            <nav className="flex flex-col space-y-2 mb-8" role="navigation" aria-label="Primary navigation">
+              {links.map(l => {
+                const Icon = l.icon
+                return (
+                  <Link
+                    key={l.to}
+                    to={l.to}
+                    className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all ${
+                      isActive(l.to)
+                        ? 'bg-violet-600/20 text-violet-300 border border-violet-500/20 shadow-[0_0_10px_rgba(139,92,246,0.1)]'
+                        : 'text-slate-400 hover:bg-slate-800 hover:text-slate-100 border border-transparent'
+                    }`}
+                    onClick={() => setMobileOpen(false)}
+                    aria-current={isActive(l.to) ? 'page' : undefined}
+                  >
+                    {Icon && <Icon className="w-5 h-5" />}
+                    {l.label}
+                  </Link>
+                )
+              })}
+            </nav>
+
+            {/* User Menu / Bottom Actions */}
+            <div className="pt-6 border-t border-slate-700/50 flex flex-col space-y-4">
+              <div className="hidden md:flex items-center justify-between">
+                <span className="text-sm text-slate-400">Notifications</span>
+                <div className="text-slate-300">
+                  <NotificationBell open={notificationsOpen} onOpen={() => setNotificationsOpen(true)} />
+                </div>
               </div>
+
+              {hasRole('ADMIN') && (
+                <button className="flex items-center gap-3 px-3 py-2 text-sm text-slate-400 hover:bg-slate-800 hover:text-slate-100 rounded-lg transition-colors border border-transparent" title="Broadcast" onClick={() => setBroadcastOpen(true)} aria-label="Open broadcast dialog">
+                  📣 Broadcast
+                </button>
+              )}
+
               {user ? (
-                <div className="flex items-center space-x-3">
-                  <span className="hidden sm:inline text-sm text-slate-300">Welcome, {user.sub}</span>
+                <div className="flex flex-col space-y-3 pt-2">
+                  <span className="text-sm font-medium text-slate-300 break-all px-1">👤 {user.sub}</span>
                   <button 
                     onClick={logout}
-                    className="px-3 py-1.5 bg-slate-800 text-slate-200 hover:bg-slate-700 rounded-md text-sm transition-colors"
+                    className="w-full text-center px-4 py-2 bg-slate-800/80 text-slate-200 hover:bg-slate-700 rounded-lg text-sm font-medium transition-colors border border-slate-600/50"
                   >
                     Logout
                   </button>
                 </div>
               ) : (
-                <div className="flex items-center space-x-2">
-                  <Link to="/login" className="px-3 py-1.5 bg-indigo-600 text-white hover:bg-indigo-700 rounded-md text-sm transition-colors">Login</Link>
-                  <Link to="/register" className="px-3 py-1.5 bg-slate-800 text-slate-200 hover:bg-slate-700 rounded-md text-sm transition-colors">Register</Link>
+                <div className="flex flex-col space-y-2">
+                  <Link to="/login" className="w-full text-center px-4 py-2 bg-violet-600 text-white hover:bg-violet-700 rounded-lg text-sm font-medium transition-all shadow-[0_0_15px_rgba(124,58,237,0.3)] border border-violet-500/50">Login</Link>
+                  <Link to="/register" className="w-full text-center px-4 py-2 bg-slate-800/80 text-slate-200 hover:bg-slate-700 rounded-lg text-sm font-medium transition-colors border border-slate-600/50">Register</Link>
                 </div>
               )}
             </div>
-            {/* Notifications drawer (shared) */}
-            <NotificationsDrawer open={notificationsOpen} onClose={() => setNotificationsOpen(false)} />
-            <BroadcastModal open={broadcastOpen} onClose={() => setBroadcastOpen(false)} />
-            <Toast />
           </div>
-        </div>
 
-        {mobileOpen && (
-          <div className="md:hidden border-t border-slate-800 bg-slate-900">
-            <div className="container py-2">
-              <nav className="flex flex-col space-y-1">
-                {links.map(l => (
-                  <Link
-                    key={l.to}
-                    to={l.to}
-                    className={`block px-3 py-2 rounded-md text-base font-medium ${
-                      isActive(l.to)
-                        ? 'bg-indigo-600 text-white'
-                        : 'text-slate-300 hover:bg-slate-800 hover:text-white'
-                    }`}
-                    onClick={() => setMobileOpen(false)}
-                  >
-                    {l.label}
-                  </Link>
-                ))}
-              </nav>
-            </div>
-          </div>
-        )}
-        
+          {/* Notifications drawer (shared) */}
+          <NotificationsDrawer open={notificationsOpen} onClose={() => setNotificationsOpen(false)} />
+          <BroadcastModal open={broadcastOpen} onClose={() => setBroadcastOpen(false)} />
+          <Toast />
+        </div>
       </header>
       
       {/* Main Content */}
-      <main className="container py-6">
-        {children}
-      </main>
-      
-      {/* Footer */}
-      <footer className="bg-white border-t border-gray-200 mt-12">
-        <div className="container py-8">
-          <div className="text-center text-gray-500">
-            <p>&copy; 2024 EventSphere. Built with React & Spring Boot.</p>
-            <div className="mt-2 text-sm">
-              <a href="/style-guide" className="nav-link">Style guide</a>
+      <div className="flex-1 flex flex-col min-h-screen relative overflow-x-hidden">
+        <main className="flex-1 p-4 md:p-8 lg:p-10 w-full max-w-7xl mx-auto">
+          {children}
+        </main>
+
+        {/* Footer */}
+        <footer className="mt-auto border-t border-slate-800/60 bg-slate-900/50 backdrop-blur-sm">
+          <div className="px-6 py-6 max-w-7xl mx-auto">
+            <div className="flex flex-col sm:flex-row items-center justify-between text-slate-500 text-sm">
+              <p>&copy; 2024 EventSphere.</p>
+              <div className="mt-2 sm:mt-0">
+                <a href="/style-guide" className="hover:text-violet-400 transition-colors">Style guide</a>
+              </div>
             </div>
           </div>
-        </div>
-      </footer>
+        </footer>
+      </div>
     </div>
   )
 }
