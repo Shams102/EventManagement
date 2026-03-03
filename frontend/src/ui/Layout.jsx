@@ -31,27 +31,23 @@ export default function Layout({ children }) {
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
-      <header className="bg-slate-900 shadow-sm border-b border-slate-800 sticky top-0">
+      <header className="bg-white/80 backdrop-blur supports-[backdrop-filter]:bg-white/70 shadow-sm border-b border-gray-200 sticky top-0">
         <div className="container">
           <div className="flex items-center justify-between h-14">
             {/* Logo */}
             <div className="flex items-center">
-              <Link to="/" className="inline-flex items-center gap-2 font-bold text-white text-lg">
+              <Link to="/" className="logo-link">
                 🎓 EventSphere
               </Link>
             </div>
             
             {/* Navigation */}
-            <nav className="hidden md:flex items-center space-x-1 ml-6 flex-1" role="navigation" aria-label="Primary navigation">
+            <nav className="hidden md:flex items-center" role="navigation" aria-label="Primary navigation">
               {links.map(l => (
                 <Link
                   key={l.to}
                   to={l.to}
-                  className={`px-3 py-2 rounded-md text-sm font-medium transition-colors ${
-                    isActive(l.to)
-                      ? 'bg-indigo-600 text-white'
-                      : 'text-slate-300 hover:bg-slate-800 hover:text-white'
-                  }`}
+                  className={`nav-link ${isActive(l.to) ? 'active' : ''}`}
                   aria-current={isActive(l.to) ? 'page' : undefined}
                 >
                   {l.label}
@@ -63,32 +59,30 @@ export default function Layout({ children }) {
             <div className="flex items-center space-x-4">
               <button
                 type="button"
-                className="md:hidden px-3 py-1.5 bg-slate-800 text-slate-200 rounded-md text-sm"
+                className="md:hidden btn btn-secondary btn-sm"
                 onClick={() => setMobileOpen(v => !v)}
                 aria-label="Open menu"
               >
                 Menu
               </button>
               {hasRole('ADMIN') && (
-                <button className="text-slate-300 hover:text-white" title="Broadcast" onClick={() => setBroadcastOpen(true)} aria-label="Open broadcast dialog">📣</button>
+                <button className="btn btn-ghost btn-sm" title="Broadcast" onClick={() => setBroadcastOpen(true)} aria-label="Open broadcast dialog">📣</button>
               )}
-              <div className="text-slate-300">
-                <NotificationBell open={notificationsOpen} onOpen={() => setNotificationsOpen(true)} />
-              </div>
+              <NotificationBell open={notificationsOpen} onOpen={() => setNotificationsOpen(true)} />
               {user ? (
                 <div className="flex items-center space-x-3">
-                  <span className="hidden sm:inline text-sm text-slate-300">Welcome, {user.sub}</span>
+                  <span className="hidden sm:inline text-sm text-gray-700">Welcome, {user.sub}</span>
                   <button 
                     onClick={logout}
-                    className="px-3 py-1.5 bg-slate-800 text-slate-200 hover:bg-slate-700 rounded-md text-sm transition-colors"
+                    className="btn btn-secondary btn-sm"
                   >
                     Logout
                   </button>
                 </div>
               ) : (
                 <div className="flex items-center space-x-2">
-                  <Link to="/login" className="px-3 py-1.5 bg-indigo-600 text-white hover:bg-indigo-700 rounded-md text-sm transition-colors">Login</Link>
-                  <Link to="/register" className="px-3 py-1.5 bg-slate-800 text-slate-200 hover:bg-slate-700 rounded-md text-sm transition-colors">Register</Link>
+                  <Link to="/login" className="btn btn-primary btn-sm">Login</Link>
+                  <Link to="/register" className="btn btn-secondary btn-sm">Register</Link>
                 </div>
               )}
             </div>
@@ -100,18 +94,14 @@ export default function Layout({ children }) {
         </div>
 
         {mobileOpen && (
-          <div className="md:hidden border-t border-slate-800 bg-slate-900">
+          <div className="md:hidden border-t border-gray-200">
             <div className="container py-2">
-              <nav className="flex flex-col space-y-1">
+              <nav className="flex flex-col">
                 {links.map(l => (
                   <Link
                     key={l.to}
                     to={l.to}
-                    className={`block px-3 py-2 rounded-md text-base font-medium ${
-                      isActive(l.to)
-                        ? 'bg-indigo-600 text-white'
-                        : 'text-slate-300 hover:bg-slate-800 hover:text-white'
-                    }`}
+                    className={`nav-link ${isActive(l.to) ? 'active' : ''}`}
                     onClick={() => setMobileOpen(false)}
                   >
                     {l.label}

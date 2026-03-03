@@ -169,9 +169,9 @@ export default function Dashboard() {
             ) : registrations.length === 0 ? (
               <div className="text-gray-500 text-sm">No registrations yet.</div>
             ) : (
-              <div className="space-y-6">
+              <div className="space-y-4">
                 {registrations.map(ev => (
-                  <div key={ev.eventId} className="border border-gray-200 rounded-lg p-6 hover:shadow-md transition-shadow" style={{ background: 'rgba(255,255,255,0.8)' }}>
+                  <div key={ev.eventId} className="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow" style={{ background: 'rgba(255,255,255,0.8)' }}>
                     <div className="flex items-start justify-between mb-2">
                       <h3 className="font-medium text-gray-900">{ev.title}</h3>
                       <span className="bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded-full">Registered</span>
@@ -211,12 +211,12 @@ export default function Dashboard() {
             ) : createdEvents.length === 0 ? (
               <div className="text-gray-500 text-sm">No events created yet.</div>
             ) : (
-              <div className="space-y-6">
+              <div className="space-y-4">
                 {createdEvents.map(ev => {
                   const start = ev.startTime ? new Date(ev.startTime) : null
                   const editable = start && (start.getTime() - now.getTime()) > 2 * 24 * 60 * 60 * 1000
                   return (
-                    <div key={ev.id} className="border border-gray-200 rounded-lg p-6 hover:shadow-md transition-shadow" style={{ background: 'rgba(255,255,255,0.8)' }}>
+                    <div key={ev.id} className="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow" style={{ background: 'rgba(255,255,255,0.8)' }}>
                       <div className="flex items-start justify-between mb-2">
                         <div>
                           <h3 className="font-medium text-gray-900">{ev.title}</h3>
@@ -272,7 +272,7 @@ export default function Dashboard() {
             ) : bookings.length === 0 ? (
               <div className="text-gray-500 text-sm">No room requests yet.</div>
             ) : (
-              <div className="space-y-6">
+              <div className="space-y-4">
                 {bookings.map(b => {
                   const start = b.start ? new Date(b.start) : null
                   const canCancel = b.status === 'PENDING' && start && (start.getTime() - now.getTime()) > 2 * 24 * 60 * 60 * 1000
@@ -285,7 +285,7 @@ export default function Dashboard() {
                     }
                   }
                   return (
-                    <div key={b.id} className="border border-gray-200 rounded-lg p-6 hover:shadow-md transition-shadow" style={{ background: 'rgba(255,255,255,0.8)' }}>
+                    <div key={b.id} className="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow" style={{ background: 'rgba(255,255,255,0.8)' }}>
                       <div className="flex items-start justify-between mb-2">
                         <div>
                           <h3 className="font-medium text-gray-900">{b.eventTitle || 'Meeting'}</h3>
