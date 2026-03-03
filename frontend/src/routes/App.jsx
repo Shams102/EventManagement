@@ -33,7 +33,7 @@ export default function App() {
           <Route path="/events/create" element={<ProtectedRoute roles={['FACULTY','CLUB_ASSOCIATE','ADMIN']}><CreateEvent /></ProtectedRoute>} />
           <Route path="/events/edit/:id" element={<ProtectedRoute roles={['FACULTY','CLUB_ASSOCIATE','ADMIN']}><EventEdit /></ProtectedRoute>} />
           <Route path="/bookings" element={<ProtectedRoute roles={['FACULTY','CLUB_ASSOCIATE','ADMIN']}><Bookings /></ProtectedRoute>} />
-          <Route path="/events/register/:eventId" element={<ProtectedRoute roles={['GENERAL_USER','CLUB_ASSOCIATE','FACULTY','ADMIN']}><EventRegistration /></ProtectedRoute>} />
+          <Route path="/register/:eventId" element={<ProtectedRoute roles={['GENERAL_USER','CLUB_ASSOCIATE','FACULTY','ADMIN']}><EventRegistration /></ProtectedRoute>} />
           <Route path="/book-room" element={<ProtectedRoute roles={['FACULTY','CLUB_ASSOCIATE','ADMIN']}><RoomBooking /></ProtectedRoute>} />
           <Route path="/enhanced-book-room" element={<ProtectedRoute roles={['FACULTY','CLUB_ASSOCIATE','ADMIN']}><RoomBooking /></ProtectedRoute>} />
           <Route path="/admin/role-requests" element={<ProtectedRoute roles={['ADMIN']}><AdminRoleRequests /></ProtectedRoute>} />
