@@ -15,6 +15,7 @@
     "@fullcalendar/interaction": "^6.1.20",
     "@fullcalendar/react": "^6.1.15",
     "@fullcalendar/timegrid": "^6.1.15",
+    "@radix-ui/react-tooltip": "^1.2.8",
     "autoprefixer": "^10.4.24",
     "axios": "^1.7.7",
     "jwt-decode": "^4.0.0",

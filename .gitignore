@@ -117,3 +117,7 @@ venv.bak/
 # Temporary files
 tmp/
 temp/
+
+# Production Build
+frontend/dist/
+backend/event-management/target/

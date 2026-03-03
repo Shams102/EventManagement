@@ -10,6 +10,7 @@ import api from '../lib/api'
 export default function Events() {
   const navigate = useNavigate()
   const [events, setEvents] = useState([])
+  const [navigating, setNavigating] = useState(false)
   const [eventList, setEventList] = useState([])
   const [loading, setLoading] = useState(true)
   const [registeredEventIds, setRegisteredEventIds] = useState(() => new Set())
@@ -22,8 +23,8 @@ export default function Events() {
         title: e.title, 
         start: e.startTime, 
         end: e.endTime,
-        backgroundColor: '#3b82f6',
-        borderColor: '#2563eb'
+        backgroundColor: '#7c3aed',
+        borderColor: '#6d28d9'
       }))
       setEvents(mapped)
       setEventList(res.data || [])
@@ -57,11 +58,11 @@ export default function Events() {
     return (
       <div className="text-center py-12">
         <div className="mx-auto mb-6" style={{maxWidth:320}}>
-          <div className="skeleton w-full h-8 mb-3 animate-pulse"></div>
-          <div className="skeleton w-full h-6 mb-2 animate-pulse"></div>
-          <div className="skeleton w-full h-6 animate-pulse"></div>
+          <div className="skeleton w-full h-8 mb-3 animate-pulse bg-slate-800"></div>
+          <div className="skeleton w-full h-6 mb-2 animate-pulse bg-slate-800"></div>
+          <div className="skeleton w-full h-6 animate-pulse bg-slate-800"></div>
         </div>
-        <p className="text-gray-600">Loading events...</p>
+        <p className="text-slate-400">Loading events...</p>
       </div>
     )
   }
@@ -78,11 +79,9 @@ export default function Events() {
   }
 
   const canOpenEventPage = (evt) => {
-    // The event page also hosts event notifications. Allow creators/admins to open it even if they can't register.
     if (!user) return false
     if (hasRole('ADMIN') || hasRole('FACULTY')) return true
     if (evt && evt.createdBy && evt.createdBy === user.sub) return true
-    // general users / club associates can open if they are eligible to register
     return canRegister(evt)
   }
 
@@ -100,8 +99,8 @@ export default function Events() {
     <div>
       <div className="mb-8 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">EventSphere</h1>
-          <p className="text-gray-600">Discover and register for upcoming events</p>
+          <h1 className="text-3xl font-bold text-slate-100">EventSphere</h1>
+          <p className="text-slate-400">Discover and register for upcoming events</p>
         </div>
         {(hasRole('ADMIN') || hasRole('FACULTY') || hasRole('CLUB_ASSOCIATE')) && (
           <div className="flex gap-2">
@@ -111,10 +110,18 @@ export default function Events() {
       </div>
 
       {/* Calendar View */}
-      <div className="card mb-8">
+      <div className="card mb-8 relative">
+        {navigating && (
+          <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm z-[70] flex items-center justify-center rounded-xl">
+            <div className="flex items-center gap-3 bg-slate-800 border border-slate-700 px-5 py-3 rounded-full shadow-xl text-sm font-medium text-violet-300">
+              <span className="spinner w-4 h-4 border-2 border-violet-500/30 border-t-violet-500"></span>
+              Redirecting to registration...
+            </div>
+          </div>
+        )}
         <div className="flex items-center justify-between mb-4">
-          <h2 className="text-xl font-semibold">Event Calendar</h2>
-          <div className="text-xs text-gray-500">Click an event to register (if eligible)</div>
+          <h2 className="text-xl font-semibold text-slate-100">Event Calendar</h2>
+          <div className="text-xs text-slate-400">Click an event to register</div>
         </div>
         <FullCalendar 
           plugins={[dayGridPlugin, timeGridPlugin, interactionPlugin]}
@@ -143,7 +150,10 @@ export default function Events() {
           eventClick={(info) => {
             const event = eventList.find(e => e.id === info.event.id)
             if (event && canOpenEventPage(event)) {
-              navigate(`/events/register/${event.id}`)
+              setNavigating(true)
+              setTimeout(() => {
+                navigate(`/events/register/${event.id}`)
+              }, 400)
             }
           }}
         />
@@ -204,9 +214,9 @@ export default function Events() {
                   </Link>
                 ) : (
                   registeredEventIds.has(Number(event.id)) ? (
-                    <button className="btn btn-secondary btn-sm w-full" disabled>
-                      Registered
-                    </button>
+                    <div className="flex items-center justify-center gap-2 bg-emerald-900/30 text-emerald-400 border border-emerald-800/50 rounded-lg py-2 text-sm font-medium w-full">
+                      ✓ Already Registered
+                    </div>
                   ) : canOpenEventPage(event) ? (
                     <Link to={`/events/register/${event.id}`} className="btn btn-secondary btn-sm w-full">
                       View Event
@@ -225,5 +235,3 @@ export default function Events() {
     </div>
   )
 }
-
-
