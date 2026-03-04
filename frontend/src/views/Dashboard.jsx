@@ -101,7 +101,7 @@ export default function Dashboard() {
                 <div className="text-sm text-gray-600">Upcoming Registrations</div>
                 <div className="text-3xl font-bold text-gray-900 mt-1">{upcomingRegs.length}</div>
               </div>
-              <div className="h-10 w-10 rounded-lg" style={{ background: 'rgba(59,130,246,0.12)' }}>
+              <div className="h-10 w-10 rounded-lg" style={{ background: 'rgba(37,99,235,0.35)' }}>
                 <div className="h-10 w-10 flex items-center justify-center text-lg">📌</div>
               </div>
             </div>
@@ -114,7 +114,7 @@ export default function Dashboard() {
                 <div className="text-sm text-gray-600">Events Created</div>
                 <div className="text-3xl font-bold text-gray-900 mt-1">{createdEvents.length}</div>
               </div>
-              <div className="h-10 w-10 rounded-lg" style={{ background: 'rgba(16,185,129,0.12)' }}>
+              <div className="h-10 w-10 rounded-lg" style={{ background: 'rgba(16,185,129,0.35)' }}>
                 <div className="h-10 w-10 flex items-center justify-center text-lg">🗓️</div>
               </div>
             </div>
@@ -127,7 +127,7 @@ export default function Dashboard() {
                 <div className="text-sm text-gray-600">Room Requests</div>
                 <div className="text-3xl font-bold text-gray-900 mt-1">{bookings.length}</div>
               </div>
-              <div className="h-10 w-10 rounded-lg" style={{ background: 'rgba(245,158,11,0.16)' }}>
+              <div className="h-10 w-10 rounded-lg" style={{ background: 'rgba(245,158,11,0.35)' }}>
                 <div className="h-10 w-10 flex items-center justify-center text-lg">🏢</div>
               </div>
             </div>
@@ -171,10 +171,10 @@ export default function Dashboard() {
             ) : (
               <div className="space-y-4">
                 {registrations.map(ev => (
-                  <div key={ev.eventId} className="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow" style={{ background: 'rgba(255,255,255,0.8)' }}>
+                  <div key={ev.eventId} className="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow" style={{ background: 'rgba(15,23,42,0.9)' }}>
                     <div className="flex items-start justify-between mb-2">
                       <h3 className="font-medium text-gray-900">{ev.title}</h3>
-                      <span className="bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded-full">Registered</span>
+                      <span className="bg-blue-600/20 text-blue-300 text-xs px-2 py-1 rounded-full">Registered</span>
                     </div>
                     <div className="text-xs text-gray-500">
                       {ev.startTime && (
@@ -216,7 +216,7 @@ export default function Dashboard() {
                   const start = ev.startTime ? new Date(ev.startTime) : null
                   const editable = start && (start.getTime() - now.getTime()) > 2 * 24 * 60 * 60 * 1000
                   return (
-                    <div key={ev.id} className="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow" style={{ background: 'rgba(255,255,255,0.8)' }}>
+                    <div key={ev.id} className="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow" style={{ background: 'rgba(15,23,42,0.9)' }}>
                       <div className="flex items-start justify-between mb-2">
                         <div>
                           <h3 className="font-medium text-gray-900">{ev.title}</h3>
@@ -228,11 +228,11 @@ export default function Dashboard() {
                             )}
                           </div>
                         </div>
-                        <span className="text-xs px-2 py-1 rounded-full bg-gray-100 text-gray-700">
+                        <span className="text-xs px-2 py-1 rounded-full bg-slate-800 text-gray-700">
                           {editable ? 'Editable' : 'Locked (<2 days)'}
                         </span>
                       </div>
-                      <div className="text-xs text-gray-500 mt-1">
+                    <div className="text-xs text-gray-500 mt-1">
                         📍 {ev.location || 'TBD'}
                       </div>
                       <div className="mt-3 flex space-x-2">
@@ -285,7 +285,7 @@ export default function Dashboard() {
                     }
                   }
                   return (
-                    <div key={b.id} className="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow" style={{ background: 'rgba(255,255,255,0.8)' }}>
+                    <div key={b.id} className="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow" style={{ background: 'rgba(15,23,42,0.9)' }}>
                       <div className="flex items-start justify-between mb-2">
                         <div>
                           <h3 className="font-medium text-gray-900">{b.eventTitle || 'Meeting'}</h3>

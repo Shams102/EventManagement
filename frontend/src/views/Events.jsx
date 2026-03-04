@@ -1,17 +1,22 @@
 import React, { useEffect, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../lib/AuthContext'
 import FullCalendar from '@fullcalendar/react'
 import dayGridPlugin from '@fullcalendar/daygrid'
 import timeGridPlugin from '@fullcalendar/timegrid'
 import api from '../lib/api'
+import showToast from '../lib/toast'
+import EventCalendarEvent from '../ui/EventCalendarEvent'
+import EventPreviewModal from '../components/EventPreviewModal'
 
 export default function Events() {
   const [events, setEvents] = useState([])
   const [eventList, setEventList] = useState([])
   const [loading, setLoading] = useState(true)
   const [registeredEventIds, setRegisteredEventIds] = useState(() => new Set())
+  const [selectedEvent, setSelectedEvent] = useState(null)
   const { hasRole, clubId, user } = useAuth()
+  const navigate = useNavigate()
 
   useEffect(() => {
     api.get('/api/public/events').then((res) => {
@@ -20,8 +25,11 @@ export default function Events() {
         title: e.title, 
         start: e.startTime, 
         end: e.endTime,
-        backgroundColor: '#3b82f6',
-        borderColor: '#2563eb'
+        backgroundColor: '#1f2937',
+        borderColor: '#334155',
+        extendedProps: {
+          category: e.category || e.type || 'default',
+        },
       }))
       setEvents(mapped)
       setEventList(res.data || [])
@@ -51,6 +59,39 @@ export default function Events() {
     return () => { mounted = false }
   }, [user])
 
+  const canRegister = (evt) => {
+    if (evt && registeredEventIds.has(Number(evt.id))) return false
+    if (user && evt.createdBy && evt.createdBy === user.sub) return false
+    if (hasRole('ADMIN') || hasRole('FACULTY')) return false
+    if (hasRole('CLUB_ASSOCIATE')) {
+      if (clubId && evt.clubId && evt.clubId === clubId) return false
+    }
+    return true
+  }
+
+  const canOpenEventPage = (evt) => {
+    if (!user) return false
+    if (hasRole('ADMIN') || hasRole('FACULTY')) return true
+    if (evt && evt.createdBy && evt.createdBy === user.sub) return true
+    return canRegister(evt)
+  }
+
+  const isAuthenticated = !!user
+
+  const getEligibilityText = (evt) => {
+    if (!evt) return ''
+    if (!isAuthenticated) {
+      return 'Login is required before you can register for this event.'
+    }
+    if (canRegister(evt)) {
+      return 'You are eligible to register for this event with your current role.'
+    }
+    if (canOpenEventPage(evt)) {
+      return 'You can view this event, but registration is not available for your role.'
+    }
+    return 'You are not eligible to register for this event based on your current role.'
+  }
+
   if (loading) {
     return (
       <div className="text-center py-12">
@@ -62,26 +103,6 @@ export default function Events() {
         <p className="text-gray-600">Loading events...</p>
       </div>
     )
-  }
-
-  const canRegister = (evt) => {
-    if (evt && registeredEventIds.has(Number(evt.id))) return false
-    // creators should not register for their own events
-    if (user && evt.createdBy && evt.createdBy === user.sub) return false
-    if (hasRole('ADMIN') || hasRole('FACULTY')) return false
-    if (hasRole('CLUB_ASSOCIATE')) {
-      if (clubId && evt.clubId && evt.clubId === clubId) return false
-    }
-    return true
-  }
-
-  const canOpenEventPage = (evt) => {
-    // The event page also hosts event notifications. Allow creators/admins to open it even if they can't register.
-    if (!user) return false
-    if (hasRole('ADMIN') || hasRole('FACULTY')) return true
-    if (evt && evt.createdBy && evt.createdBy === user.sub) return true
-    // general users / club associates can open if they are eligible to register
-    return canRegister(evt)
   }
 
   const now = new Date()
@@ -112,7 +133,9 @@ export default function Events() {
       <div className="card mb-8">
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-xl font-semibold">Event Calendar</h2>
-          <div className="text-xs text-gray-500">Click an event to register (if eligible)</div>
+          <div className="text-xs text-gray-500">
+            Click an event to preview details and register
+          </div>
         </div>
         <FullCalendar 
           plugins={[dayGridPlugin, timeGridPlugin]} 
@@ -124,20 +147,58 @@ export default function Events() {
             center: 'title',
             right: 'dayGridMonth,timeGridWeek'
           }}
-          eventClick={(info) => {
-            const event = eventList.find(e => e.id === info.event.id)
-            if (event && canOpenEventPage(event)) {
-              window.location.href = `/register/${event.id}`
+          eventContent={(arg) => {
+            const category = arg.event.extendedProps.category
+            return (
+              <EventCalendarEvent
+                title={arg.event.title}
+                timeText={arg.timeText}
+                category={category}
+              />
+            )
+          }}
+          eventClassNames={() => ['fc-custom-event']}
+          eventDidMount={(info) => {
+            if (info.el) {
+              info.el.classList.add('calendar-event-wrapper')
             }
+          }}
+          eventClick={(info) => {
+            if (info.jsEvent && typeof info.jsEvent.preventDefault === 'function') {
+              info.jsEvent.preventDefault()
+            }
+            const clickedId = info.event.id
+            const evt = eventList.find(e => String(e.id) === String(clickedId))
+            if (!evt) return
+            setSelectedEvent(evt)
           }}
         />
       </div>
+
+      <EventPreviewModal
+        isOpen={!!selectedEvent}
+        event={selectedEvent}
+        eligibilityText={getEligibilityText(selectedEvent)}
+        onClose={() => setSelectedEvent(null)}
+        onRegister={() => {
+          if (!selectedEvent) return
+          if (!user) {
+            navigate('/login')
+            return
+          }
+          if (!canOpenEventPage(selectedEvent)) {
+            showToast({ message: 'You are not eligible to register for this event.', type: 'error' })
+            return
+          }
+          navigate(`/events/${selectedEvent.id}/register`)
+        }}
+      />
       
       {/* Event List */}
       <div className="card">
         <div className="flex items-center justify-between mb-6">
           <h2 className="text-xl font-semibold">Upcoming Events</h2>
-          <span className="text-xs px-2 py-1 rounded-full bg-gray-50 text-gray-700 border border-gray-200">
+          <span className="text-xs px-2 py-1 rounded-full bg-slate-800 text-gray-700 border border-gray-200">
             Next 15 days: {upcomingEvents.length}
           </span>
         </div>
@@ -149,10 +210,10 @@ export default function Events() {
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {upcomingEvents.map(event => (
-              <div key={event.id} className="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow" style={{ background: 'rgba(255,255,255,0.8)' }}>
+              <div key={event.id} className="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow" style={{ background: 'rgba(15,23,42,0.9)' }}>
                 <div className="flex items-start justify-between mb-3">
                   <h3 className="text-lg font-semibold text-gray-900">{event.title}</h3>
-                  <span className="bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded-full">
+                  <span className="bg-blue-600/20 text-blue-300 text-xs px-2 py-1 rounded-full">
                     Public
                   </span>
                 </div>
@@ -181,7 +242,7 @@ export default function Events() {
                 
                 {canRegister(event) ? (
                   <Link 
-                    to={`/register/${event.id}`} 
+                    to={`/events/${event.id}/register`} 
                     className="btn btn-primary btn-sm w-full"
                   >
                     Register for Event
@@ -192,7 +253,7 @@ export default function Events() {
                       Registered
                     </button>
                   ) : canOpenEventPage(event) ? (
-                    <Link to={`/register/${event.id}`} className="btn btn-secondary btn-sm w-full">
+                    <Link to={`/events/${event.id}/register`} className="btn btn-secondary btn-sm w-full">
                       View Event
                     </Link>
                   ) : (

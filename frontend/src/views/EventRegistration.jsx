@@ -4,6 +4,7 @@ import api from '../lib/api'
 import { showToast } from '../lib/toast'
 import EventNotificationsPanel from './EventNotificationsPanel'
 import { useAuth } from '../lib/AuthContext'
+import { motion } from 'framer-motion'
 
 export default function EventRegistration() {
   const { eventId } = useParams()
@@ -103,11 +104,17 @@ export default function EventRegistration() {
   }
 
   return (
-    <div className="max-w-6xl mx-auto px-2 sm:px-4">
+    <motion.div
+      className="max-w-6xl mx-auto px-2 sm:px-4"
+      initial={{ opacity: 0, y: 12 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, y: -8 }}
+      transition={{ duration: 0.2, ease: 'easeOut' }}
+    >
       <div className="mb-8 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-slate-900">Event Registration</h1>
-          <p className="text-slate-600">Complete your registration for this event</p>
+          <h1 className="text-3xl font-bold text-slate-100">Event Registration</h1>
+          <p className="text-slate-400">Complete your registration for this event</p>
         </div>
         <button 
           onClick={() => navigate('/events')}
@@ -123,14 +130,14 @@ export default function EventRegistration() {
           <h2 className="text-xl font-semibold mb-4">Event Details</h2>
           <div className="space-y-4">
             <div>
-              <h3 className="font-semibold text-slate-900">{event.title}</h3>
+              <h3 className="font-semibold text-slate-100">{event.title}</h3>
               {event.description && (
-                <p className="text-slate-600 text-sm mt-1">{event.description}</p>
+                <p className="text-slate-400 text-sm mt-1">{event.description}</p>
               )}
             </div>
             
             <div className="space-y-2">
-                <div className="flex items-center text-sm text-slate-500">
+                <div className="flex items-center text-sm text-slate-400">
                 <span className="mr-2">📅</span>
                 <span>{formattedDate} • {formattedTimeRange}</span>
               </div>
@@ -139,9 +146,18 @@ export default function EventRegistration() {
                   Registration deadline: {registrationDeadlineStr}
                 </div>
               )}
-              <div className="flex items-center text-sm text-slate-500">
+              <div className="flex items-center text-sm text-slate-400">
                 <span className="mr-2">📍</span>
                 <span>{event.location || 'TBD'}</span>
+              </div>
+              <div className="mt-3 text-sm text-slate-400">
+                <div className="font-semibold text-slate-300 mb-1">Eligibility</div>
+                <div className="space-y-1">
+                  <div>• Eligible roles: General Users and Club Associates.</div>
+                  <div>• Event creators cannot register for their own events.</div>
+                  <div>• Admins and Faculty typically manage or host events instead of registering.</div>
+                  <div className="text-xs text-slate-500 mt-1">Final eligibility is always enforced by the backend.</div>
+                </div>
               </div>
             </div>
           </div>
@@ -166,6 +182,12 @@ export default function EventRegistration() {
           {isCreator && (
             <div className="alert alert-error mb-4">
               Event creators cannot register for their own events.
+            </div>
+          )}
+
+          {isRegistered && (
+            <div className="alert alert-success mb-4">
+              You are already registered for this event.
             </div>
           )}
           
@@ -215,7 +237,7 @@ export default function EventRegistration() {
             <button
               type="submit"
               className="btn btn-primary w-full"
-              disabled={loading || closed || isCreator || !canRegisterRole}
+              disabled={loading || closed || isCreator || !canRegisterRole || isRegistered}
             >
               {loading ? (
                 <div className="flex items-center justify-center">
@@ -223,14 +245,14 @@ export default function EventRegistration() {
                   Registering...
                 </div>
               ) : (
-                'Register for Event'
+                isRegistered ? 'Already registered' : 'Register for Event'
               )}
             </button>
           </form>
 
-          <div className="mt-6 rounded-xl border border-slate-200 bg-white/70 p-4">
-            <h3 className="font-semibold text-slate-900 mb-2">Registration Terms</h3>
-            <div className="text-sm text-slate-600 space-y-1">
+          <div className="mt-6 rounded-xl border border-slate-800 bg-slate-900 p-4">
+            <h3 className="font-semibold text-slate-100 mb-2">Registration Terms</h3>
+            <div className="text-sm text-slate-400 space-y-1">
               <div>Registration is free and open to all campus members</div>
               <div>You will receive a confirmation after registration</div>
               <div>Please arrive 10 minutes before the event starts</div>
@@ -243,7 +265,7 @@ export default function EventRegistration() {
       {/* Event notifications (only for registered users) */}
       <EventNotificationsPanel eventId={eventId} canView={canViewNotifications} canPost={canPostNotifications} />
 
-    </div>
+    </motion.div>
   )
 }
 

@@ -126,25 +126,25 @@ export const breakpoints = {
 
 // Reusable component styles
 export const buttonStyles = {
-  base: 'inline-flex items-center justify-center px-4 py-2 border border-transparent text-sm font-medium rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 transition-colors duration-200',
+  base: 'inline-flex items-center justify-center px-4 py-2 border border-transparent text-sm font-medium rounded-lg focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 focus:ring-offset-slate-950 transition-all duration-200',
   sizes: {
     sm: 'px-3 py-1.5 text-xs',
     md: 'px-4 py-2 text-sm',
-    lg: 'px-6 py-3 text-base',
+    lg: 'px-5 py-2.5 text-base',
   },
   variants: {
-    primary: `bg-blue-600 text-white hover:bg-blue-700 focus:ring-blue-500`,
-    secondary: `bg-gray-600 text-white hover:bg-gray-700 focus:ring-gray-500`,
-    success: `bg-green-600 text-white hover:bg-green-700 focus:ring-green-500`,
-    warning: `bg-yellow-600 text-white hover:bg-yellow-700 focus:ring-yellow-500`,
-    error: `bg-red-600 text-white hover:bg-red-700 focus:ring-red-500`,
-    outline: `border-gray-300 text-gray-700 bg-white hover:bg-gray-50 focus:ring-blue-500`,
-    ghost: `text-gray-700 hover:bg-gray-100 focus:ring-gray-500`,
+    primary: `bg-blue-600 text-white hover:bg-blue-500`,
+    secondary: `bg-slate-800 text-slate-100 border border-slate-700 hover:bg-slate-700`,
+    success: `bg-green-600 text-white hover:bg-green-500`,
+    warning: `bg-yellow-600 text-white hover:bg-yellow-500`,
+    error: `bg-red-600 text-white hover:bg-red-500`,
+    outline: `border border-slate-700 text-slate-100 bg-transparent hover:bg-slate-800`,
+    ghost: `text-slate-300 bg-transparent hover:bg-slate-800`,
   },
 }
 
 export const cardStyles = {
-  base: 'bg-white rounded-lg shadow-md border border-gray-200',
+  base: 'bg-slate-900 rounded-xl shadow-lg shadow-black/20 border border-slate-800',
   padding: {
     sm: 'p-4',
     md: 'p-6',
@@ -153,55 +153,55 @@ export const cardStyles = {
 }
 
 export const inputStyles = {
-  base: 'block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm',
-  error: 'border-red-300 text-red-900 placeholder-red-300 focus:ring-red-500 focus:border-red-500',
+  base: 'block w-full px-3 py-2 border border-slate-700 rounded-md bg-slate-900 text-slate-100 shadow-sm placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500/60 focus:border-blue-500 sm:text-sm',
+  error: 'border-red-500 text-red-200 placeholder-red-400 focus:ring-red-500 focus:border-red-500',
 }
 
 export const alertStyles = {
-  base: 'p-4 rounded-md',
+  base: 'p-4 rounded-lg border',
   variants: {
-    info: 'bg-blue-50 border border-blue-200 text-blue-800',
-    success: 'bg-green-50 border border-green-200 text-green-800',
-    warning: 'bg-yellow-50 border border-yellow-200 text-yellow-800',
-    error: 'bg-red-50 border border-red-200 text-red-800',
+    info: 'bg-slate-900/80 border-slate-700 text-slate-100',
+    success: 'bg-emerald-900/60 border-emerald-700 text-emerald-100',
+    warning: 'bg-amber-900/60 border-amber-700 text-amber-100',
+    error: 'bg-red-900/60 border-red-700 text-red-100',
   },
 }
 
 export const badgeStyles = {
   base: 'inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium',
   variants: {
-    primary: 'bg-blue-100 text-blue-800',
-    secondary: 'bg-gray-100 text-gray-800',
-    success: 'bg-green-100 text-green-800',
-    warning: 'bg-yellow-100 text-yellow-800',
-    error: 'bg-red-100 text-red-800',
+    primary: 'bg-blue-600/20 text-blue-300',
+    secondary: 'bg-slate-800 text-slate-200',
+    success: 'bg-emerald-600/20 text-emerald-300',
+    warning: 'bg-amber-600/20 text-amber-300',
+    error: 'bg-red-600/20 text-red-300',
   },
 }
 
 export const sidebarStyles = {
-  base: 'fixed inset-y-0 left-0 z-50 w-64 bg-white shadow-lg transform transition-transform duration-300 ease-in-out lg:translate-x-0 lg:static lg:inset-0',
+  base: 'fixed inset-y-0 left-0 z-50 w-64 bg-slate-950 border-r border-slate-800 shadow-lg shadow-black/20 transform transition-transform duration-300 ease-in-out lg:translate-x-0 lg:static lg:inset-0',
   item: 'flex items-center px-4 py-2 text-sm font-medium rounded-md transition-colors duration-200',
-  itemActive: 'bg-blue-50 text-blue-700 border-r-2 border-blue-700',
-  itemInactive: 'text-gray-600 hover:bg-gray-50 hover:text-gray-900',
+  itemActive: 'bg-slate-800 text-slate-100 border-r-2 border-blue-500',
+  itemInactive: 'text-slate-400 hover:bg-slate-800 hover:text-slate-100',
 }
 
 export const headerStyles = {
-  base: 'bg-white shadow-sm border-b border-gray-200',
-  title: 'text-lg font-semibold text-gray-900',
-  subtitle: 'text-sm text-gray-500',
+  base: 'bg-slate-900 border-b border-slate-800',
+  title: 'text-lg font-semibold text-slate-100',
+  subtitle: 'text-sm text-slate-400',
 }
 
 export const tableStyles = {
-  base: 'min-w-full divide-y divide-gray-200',
-  header: 'bg-gray-50',
-  headerCell: 'px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider',
-  bodyCell: 'px-6 py-4 whitespace-nowrap text-sm text-gray-900',
-  row: 'hover:bg-gray-50',
+  base: 'min-w-full divide-y divide-slate-800',
+  header: 'bg-slate-900',
+  headerCell: 'px-6 py-3 text-left text-xs font-medium text-slate-400 uppercase tracking-wider',
+  bodyCell: 'px-6 py-4 whitespace-nowrap text-sm text-slate-100',
+  row: 'hover:bg-slate-900/60',
 }
 
 export const paginationStyles = {
-  base: 'flex items-center justify-between bg-white px-4 py-3 sm:px-6 border-t border-gray-200 sm:rounded-b-lg',
-  button: 'relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50',
+  base: 'flex items-center justify-between bg-slate-900 px-4 py-3 sm:px-6 border-t border-slate-800 sm:rounded-b-lg',
+  button: 'relative inline-flex items-center px-4 py-2 border border-slate-700 text-sm font-medium rounded-md text-slate-200 bg-slate-900 hover:bg-slate-800',
   buttonActive: 'relative inline-flex items-center px-4 py-2 border border-blue-500 text-sm font-medium rounded-md text-white bg-blue-600',
 }
 
