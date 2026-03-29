@@ -4,7 +4,6 @@ import { useAuth } from '../lib/AuthContext'
 import NotificationBell from './notifications/NotificationBell'
 import NotificationsDrawer from './notifications/NotificationsDrawer'
 import BroadcastModal from './BroadcastModal'
-import Toast from './Toast'
 import Container from './Container'
 import Button from './Button'
 
@@ -69,7 +68,20 @@ export default function Layout({ children }) {
                 Menu
               </Button>
               {hasRole('ADMIN') && (
-                <button className="btn btn-ghost btn-sm" title="Broadcast" onClick={() => setBroadcastOpen(true)} aria-label="Open broadcast dialog">📣</button>
+                <Button
+                  variant="primary"
+                  size="sm"
+                  className="shadow-[0_10px_30px_rgba(0,0,0,0.35)]"
+                  onClick={() => setBroadcastOpen(true)}
+                  aria-label="Open broadcast dialog"
+                >
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                    <path d="M4 13.5v-3a2 2 0 0 1 2-2h2l8-4v15l-8-4H6a2 2 0 0 1-2-2Z" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" />
+                    <path d="M18 9.5a3.5 3.5 0 0 1 0 5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+                    <path d="M20 7.5a6.5 6.5 0 0 1 0 9" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+                  </svg>
+                  Broadcast
+                </Button>
               )}
               <NotificationBell open={notificationsOpen} onOpen={() => setNotificationsOpen(true)} />
               {user ? (
@@ -97,7 +109,6 @@ export default function Layout({ children }) {
             {/* Notifications drawer (shared) */}
             <NotificationsDrawer open={notificationsOpen} onClose={() => setNotificationsOpen(false)} />
             <BroadcastModal open={broadcastOpen} onClose={() => setBroadcastOpen(false)} />
-            <Toast />
           </div>
         </Container>
 

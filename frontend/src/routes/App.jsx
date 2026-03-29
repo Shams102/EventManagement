@@ -20,6 +20,7 @@ import StyleGuide from '../views/StyleGuide'
 import NotificationsPage from '../views/NotificationsPage'
 import ThreadChatPage from '../views/ThreadChatPage'
 import { AnimatePresence } from 'framer-motion'
+import Toast from '../ui/Toast'
 
 function AppRoutes() {
   const location = useLocation()
@@ -57,6 +58,7 @@ export default function App() {
       <Layout>
         <AppRoutes />
       </Layout>
+      <Toast />
     </AuthProvider>
   )
 }

@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react'
+import Button from './Button'
 
 export default function Toast() {
   const [toasts, setToasts] = useState([])
@@ -20,11 +21,13 @@ export default function Toast() {
   return (
     <div className="toast-container" aria-live="polite" aria-atomic="true">
       {toasts.map((t) => (
-        <div key={t.id} className={`toast ${t.type}`} role="status">
+        <div key={t.id} className={`toast ${t.type}`} role={t.type === 'error' ? 'alert' : 'status'}>
           <div className="flex-1">
             <div className="toast-title">{t.message}</div>
           </div>
-          <button className="btn btn-ghost btn-sm toast-close" onClick={() => dismiss(t.id)} aria-label="Dismiss notification">✕</button>
+          <Button variant="ghost" size="sm" className="toast-close px-2 py-1" onClick={() => dismiss(t.id)} aria-label="Dismiss notification">
+            ✕
+          </Button>
         </div>
       ))}
     </div>
