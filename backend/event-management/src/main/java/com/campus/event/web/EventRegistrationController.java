@@ -106,6 +106,14 @@ public class EventRegistrationController {
             }
         }
 
+        // capacity check
+        if (event.getMaxAttendees() != null && event.getMaxAttendees() > 0) {
+            long currentCount = registrationRepository.findByEvent_Id(eventId).size();
+            if (currentCount >= event.getMaxAttendees()) {
+                return ResponseEntity.status(403).body("Event is full");
+            }
+        }
+
         EventRegistration reg = new EventRegistration();
         reg.setEvent(event);
         reg.setUser(user);

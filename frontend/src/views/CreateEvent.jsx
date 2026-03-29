@@ -5,6 +5,7 @@ import { useAuth } from '../lib/AuthContext'
 import api from '../lib/api'
 import Card from '../ui/Card'
 import Button from '../ui/Button'
+import TimeSelect from '../ui/TimeSelect'
 
 const FIELD_OPTIONS = [
   { key: 'full_name', label: 'Full Name' },
@@ -23,24 +24,26 @@ export default function CreateEvent() {
   const navigate = useNavigate()
   const [title, setTitle] = useState('')
   const [description, setDescription] = useState('')
-  const [start, setStart] = useState('')
-  const [end, setEnd] = useState('')
+  const [startDate, setStartDate] = useState('')
+  const [startTime, setStartTime] = useState('')
+  const [endDate, setEndDate] = useState('')
+  const [endTime, setEndTime] = useState('')
   const [loc, setLoc] = useState('')
   const [club, setClub] = useState(clubId || '')
   const [selected, setSelected] = useState(['full_name', 'email'])
+  const [maxAttendees, setMaxAttendees] = useState('')
   const [error, setError] = useState('')
   const [message, setMessage] = useState('')
   const [loading, setLoading] = useState(false)
 
-  const getMinDateTimeLocal = () => {
+  const getMinDate = () => {
     const now = new Date()
-    now.setSeconds(0,0)
-    const pad = (n) => String(n).padStart(2,'0')
-    return `${now.getFullYear()}-${pad(now.getMonth()+1)}-${pad(now.getDate())}T${pad(now.getHours())}:${pad(now.getMinutes())}`
+    const pad = (n) => String(n).padStart(2, '0')
+    return `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`
   }
 
   const allowed = hasRole('ADMIN') || hasRole('FACULTY') || hasRole('CLUB_ASSOCIATE')
-  const isFormValid = title.trim() && start && end && (new Date(`${end}:00`) > new Date(`${start}:00`))
+  const isFormValid = title.trim() && startDate && startTime && endDate && endTime
 
   const toggleField = (key) => {
     setSelected((prev) => prev.includes(key) ? prev.filter(k => k !== key) : [...prev, key])
@@ -57,16 +60,17 @@ export default function CreateEvent() {
 
       // client-side validation: no past dates and end after start
       const now = new Date()
-      if (!start || !end) { setError('Please provide both start and end'); setLoading(false); return }
-      const startDt = new Date(`${start}:00`)
-      const endDt = new Date(`${end}:00`)
+      if (!startDate || !startTime || !endDate || !endTime) { setError('Please provide both start and end'); setLoading(false); return }
+      const startLocal = `${startDate}T${startTime}`
+      const endLocal = `${endDate}T${endTime}`
+      const startDt = new Date(`${startLocal}:00`)
+      const endDt = new Date(`${endLocal}:00`)
       if (startDt < now) { setError('Start time cannot be in the past'); setLoading(false); return }
       if (endDt <= startDt) { setError('End time must be after start time'); setLoading(false); return }
 
-      // datetime-local gives 'YYYY-MM-DDTHH:MM' in local time.
-      // Append seconds and send as-is so backend LocalDateTime stores the same local time.
-      const startValue = start ? `${start}:00` : null
-      const endValue = end ? `${end}:00` : null
+      // Send local time as 'YYYY-MM-DDTHH:MM:SS' so backend LocalDateTime stores the same local time.
+      const startValue = `${startLocal}:00`
+      const endValue = `${endLocal}:00`
       const res = await api.post('/api/events', {
         title: title.trim(),
         description: description.trim(),
@@ -74,6 +78,7 @@ export default function CreateEvent() {
         end: endValue,
         location: loc.trim() || undefined,
         clubId: club || undefined,
+        maxAttendees: maxAttendees ? Number(maxAttendees) : undefined,
         registrationSchema
       })
       if (res.status === 200) {
@@ -130,17 +135,49 @@ export default function CreateEvent() {
               <div className="mt-5 grid grid-cols-1 md:grid-cols-2 gap-5">
                 <div className="form-group">
                   <label className="form-label">Start</label>
-                  <input type="datetime-local" className="form-input" value={start} onChange={(e)=>setStart(e.target.value)} required min={getMinDateTimeLocal()} />
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <input
+                      type="date"
+                      className="form-input"
+                      value={startDate}
+                      onChange={(e) => setStartDate(e.target.value)}
+                      min={getMinDate()}
+                      required
+                    />
+                    <TimeSelect value={startTime} onChange={setStartTime} required />
+                  </div>
                 </div>
                 <div className="form-group">
                   <label className="form-label">End</label>
-                  <input type="datetime-local" className="form-input" value={end} onChange={(e)=>setEnd(e.target.value)} required min={start || getMinDateTimeLocal()} />
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <input
+                      type="date"
+                      className="form-input"
+                      value={endDate}
+                      onChange={(e) => setEndDate(e.target.value)}
+                      min={startDate || getMinDate()}
+                      required
+                    />
+                    <TimeSelect value={endTime} onChange={setEndTime} required />
+                  </div>
                 </div>
               </div>
 
               <div className="mt-5 form-group">
                 <label className="form-label">Club ID (optional)</label>
                 <input className="form-input" value={club} onChange={(e)=>setClub(e.target.value)} placeholder="Leave blank to use your club automatically" />
+              </div>
+
+              <div className="mt-5 form-group">
+                <label className="form-label">Maximum Attendees</label>
+                <input
+                  type="number"
+                  className="form-input"
+                  value={maxAttendees}
+                  onChange={(e) => setMaxAttendees(e.target.value)}
+                  min="1"
+                  placeholder="Leave blank for unlimited"
+                />
               </div>
             </Card>
 

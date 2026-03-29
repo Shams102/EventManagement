@@ -8,4 +8,5 @@ import java.util.List;
 public interface RegistrationRepository extends JpaRepository<Registration, Long> {
     boolean existsByEventIdAndEmail(Long eventId, String email);
     List<Registration> findByEmail(String email);
+    void deleteByEvent_Id(Long eventId);
 }

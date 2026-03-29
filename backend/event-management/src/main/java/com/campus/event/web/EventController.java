@@ -57,7 +57,8 @@ public class EventController {
                 creator,
                 request.getLocation(),
                 request.getClubId(),
-                request.getRegistrationSchema()
+                request.getRegistrationSchema(),
+                request.getMaxAttendees()
         );
         return ResponseEntity.ok(event.getId());
     }
@@ -76,6 +77,7 @@ public class EventController {
             m.put("location", e.getLocation());
             m.put("clubId", e.getClubId());
             m.put("registrationSchema", e.getRegistrationSchema());
+            m.put("maxAttendees", e.getMaxAttendees());
             return m;
         }).collect(java.util.stream.Collectors.toList());
         return ResponseEntity.ok(body);
@@ -109,6 +111,7 @@ public class EventController {
                 existing.setClubId(request.getClubId());
             }
             existing.setRegistrationSchema(request.getRegistrationSchema());
+            existing.setMaxAttendees(request.getMaxAttendees());
             eventRepository.save(existing);
 
             // Notify registrants about updates
@@ -130,6 +133,22 @@ public class EventController {
                 }
             }
             return ResponseEntity.ok("Updated");
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
+        }
+    }
+
+    @DeleteMapping("/{id}")
+    @PreAuthorize("hasAnyRole('ADMIN','FACULTY','CLUB_ASSOCIATE')")
+    public ResponseEntity<?> deleteEvent(@PathVariable Long id,
+                                          @AuthenticationPrincipal UserDetails principal) {
+        try {
+            eventService.deleteEvent(id, principal.getUsername());
+            return ResponseEntity.ok("Event cancelled successfully");
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.notFound().build();
+        } catch (SecurityException e) {
+            return ResponseEntity.status(403).body(e.getMessage());
         } catch (Exception e) {
             return ResponseEntity.badRequest().body(e.getMessage());
         }

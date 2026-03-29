@@ -37,8 +37,13 @@ export default function Layout({ children }) {
           <div className="flex items-center justify-between">
             {/* Logo */}
             <div className="flex items-center">
-              <Link to="/" className="logo-link">
-                🎓 EventSphere
+              <Link to="/" className="logo-link flex items-center gap-2 transition-all duration-200 ease hover:opacity-95">
+                <img
+                  src="/logo.png"
+                  alt="EventSphere logo"
+                  className="h-8 w-auto transition-transform duration-200 ease hover:scale-[1.05] drop-shadow-[0_6px_18px_rgba(59,130,246,0.18)]"
+                />
+                <span>EventSphere</span>
               </Link>
             </div>
             

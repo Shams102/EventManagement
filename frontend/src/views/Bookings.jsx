@@ -16,10 +16,10 @@ export default function Bookings() {
 
   const getStatusColor = (status) => {
     switch (status) {
-      case 'confirmed': return 'bg-green-100 text-green-800'
-      case 'pending': return 'bg-yellow-100 text-yellow-800'
-      case 'completed': return 'bg-gray-100 text-gray-800'
-      default: return 'bg-gray-100 text-gray-800'
+      case 'confirmed': return 'bg-emerald-900/40 text-emerald-300 border border-emerald-700/40'
+      case 'pending': return 'bg-amber-900/40 text-amber-300 border border-amber-700/40'
+      case 'completed': return 'bg-slate-800 text-slate-300 border border-slate-700'
+      default: return 'bg-slate-800 text-slate-300 border border-slate-700'
     }
   }
 
@@ -45,8 +45,8 @@ export default function Bookings() {
     <div>
       <div className="mb-8 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-slate-900">My Room Requests</h1>
-          <p className="text-slate-600">Track your room booking requests and their approval status</p>
+          <h1 className="text-2xl font-semibold text-[#E5E7EB]">My Room Requests</h1>
+          <p className="text-sm text-[#9CA3AF]">Track your room booking requests and their approval status</p>
         </div>
         <div className="flex gap-2">
           <Link to="/book-room" className="btn btn-primary">Book a New Room</Link>
@@ -59,33 +59,33 @@ export default function Bookings() {
 
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
         <div className="card">
-          <div className="text-sm text-slate-600">Total</div>
-          <div className="mt-1 text-3xl font-bold text-slate-900">{stats.total}</div>
+          <div className="text-sm text-[#9CA3AF]">Total</div>
+          <div className="mt-1 text-3xl font-bold text-[#E5E7EB]">{stats.total}</div>
         </div>
         <div className="card">
-          <div className="text-sm text-slate-600">Pending</div>
-          <div className="mt-1 text-3xl font-bold text-slate-900">{stats.pending}</div>
+          <div className="text-sm text-[#9CA3AF]">Pending</div>
+          <div className="mt-1 text-3xl font-bold text-[#E5E7EB]">{stats.pending}</div>
         </div>
         <div className="card">
-          <div className="text-sm text-slate-600">Confirmed</div>
-          <div className="mt-1 text-3xl font-bold text-slate-900">{stats.confirmed}</div>
+          <div className="text-sm text-[#9CA3AF]">Confirmed</div>
+          <div className="mt-1 text-3xl font-bold text-[#E5E7EB]">{stats.confirmed}</div>
         </div>
         <div className="card">
-          <div className="text-sm text-slate-600">Hours booked</div>
-          <div className="mt-1 text-3xl font-bold text-slate-900">{stats.hoursBooked}</div>
+          <div className="text-sm text-[#9CA3AF]">Hours booked</div>
+          <div className="mt-1 text-3xl font-bold text-[#E5E7EB]">{stats.hoursBooked}</div>
         </div>
       </div>
 
       {loading ? (
         <div className="card text-center py-12">
           <div className="spinner mx-auto mb-4"></div>
-          <p className="text-gray-600">Loading your requests...</p>
+          <p className="text-[#9CA3AF]">Loading your requests...</p>
         </div>
       ) : bookings.length === 0 ? (
         <div className="card text-center py-12">
           <div className="text-4xl mb-4">🏢</div>
-          <h3 className="text-lg font-semibold mb-2">No requests yet</h3>
-          <p className="text-gray-600 mb-6">Start by submitting your first room request</p>
+          <h3 className="text-lg font-semibold text-[#E5E7EB] mb-2">No requests yet</h3>
+          <p className="text-[#9CA3AF] mb-6">Start by submitting your first room request</p>
           <Link to="/book-room" className="btn btn-primary">
             Book a Room
           </Link>
@@ -93,11 +93,11 @@ export default function Bookings() {
       ) : (
         <div className="space-y-6">
           {bookings.map(booking => (
-            <div key={booking.id} className="card">
+            <div key={booking.id} className="card" style={{ transition: 'all 0.2s ease' }}>
               <div className="flex items-start justify-between mb-4">
                 <div>
-                  <h3 className="text-lg font-semibold text-gray-900">{booking.eventTitle || 'Meeting'}</h3>
-                  <p className="text-gray-600 text-sm">Allocated: {booking.allocatedRoom || 'TBD'}</p>
+                  <h3 className="text-lg font-semibold text-[#E5E7EB]">{booking.eventTitle || 'Meeting'}</h3>
+                  <p className="text-[#9CA3AF] text-sm">Allocated: {booking.allocatedRoom || 'TBD'}</p>
                 </div>
                 <span className={`text-xs px-2 py-1 rounded-full ${getStatusColor((booking.status || '').toLowerCase())}`}>
                   {(booking.status || '').toUpperCase()}
@@ -106,26 +106,26 @@ export default function Bookings() {
 
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
                 <div>
-                  <div className="text-sm font-medium text-gray-700">Date</div>
-                  <div className="text-sm text-gray-600">
+                  <div className="text-sm font-medium text-[#E5E7EB]">Date</div>
+                  <div className="text-sm text-[#9CA3AF]">
                     {booking.start ? new Date(booking.start).toLocaleDateString() : '-'}
                   </div>
                 </div>
                 <div>
-                  <div className="text-sm font-medium text-gray-700">Time</div>
-                  <div className="text-sm text-gray-600">
+                  <div className="text-sm font-medium text-[#E5E7EB]">Time</div>
+                  <div className="text-sm text-[#9CA3AF]">
                     {booking.start ? (
                       `${new Date(booking.start).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}${booking.end ? ` – ${new Date(booking.end).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}` : ''}`
                     ) : '-'}
                   </div>
                 </div>
                 <div>
-                  <div className="text-sm font-medium text-gray-700">Status</div>
-                  <div className="text-sm text-gray-600">{booking.status}</div>
+                  <div className="text-sm font-medium text-[#E5E7EB]">Status</div>
+                  <div className="text-sm text-[#9CA3AF]">{booking.status}</div>
                 </div>
               </div>
               {(booking.pref1 || booking.pref2 || booking.pref3) && (
-                <div className="text-xs text-gray-500">Preferences: {booking.pref1 || '—'} → {booking.pref2 || '—'} → {booking.pref3 || '—'}</div>
+                <div className="text-xs text-[#9CA3AF]">Preferences: {booking.pref1 || '—'} → {booking.pref2 || '—'} → {booking.pref3 || '—'}</div>
               )}
             </div>
           ))}
@@ -134,5 +134,3 @@ export default function Bookings() {
     </div>
   )
 }
-
-
