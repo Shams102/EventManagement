@@ -27,43 +27,60 @@ docker compose up -d --build
 
 ---
 
-## Option A: Deploy to Railway + Vercel
+## Option A: Deploy Everything to Railway (Easiest Setup)
+*This is the lowest-effort method because everything lives in one Railway project with minimal configuration.*
 
-### 1. Database (Railway)
-
+### 1. Database
 1. Create a new project on [railway.app](https://railway.app)
-2. Add a **MySQL** service
-3. Copy the connection URL: `mysql://root:PASSWORD@HOST:PORT/railway`
+2. Click **"+ New"** → **Database** → **MySQL**
+3. Railway automatically sets up the environment connection variables for you.
 
-### 2. Backend (Railway)
-
-1. In the same Railway project, add a **GitHub Repo** service pointing to this repo
-2. Set the **Root Directory** to `backend/event-management`
-3. Set environment variables:
-
-```
-SPRING_DATASOURCE_URL=jdbc:mysql://HOST:PORT/railway?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
-SPRING_DATASOURCE_USERNAME=root
-SPRING_DATASOURCE_PASSWORD=<from MySQL service>
-APP_SECURITY_JWTSECRET=<generate: openssl rand -hex 32>
-CORS_ALLOWED_ORIGINS=https://your-frontend.vercel.app
+### 2. Backend
+1. In the same Railway project, click **"+ New"** → **GitHub Repo** and select this repository.
+2. Go to **Settings** → Set the **Root Directory** to `backend/event-management`
+3. Railway auto-detects the Dockerfile.
+4. Go to **Variables** and add:
+```text
+SPRING_DATASOURCE_URL=jdbc:mysql://${MYSQL_HOST}:${MYSQL_PORT}/${MYSQL_DATABASE}?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
+SPRING_DATASOURCE_USERNAME=${MYSQL_USER}
+SPRING_DATASOURCE_PASSWORD=${MYSQL_PASSWORD}
+APP_SECURITY_JWTSECRET=<any-random-32-char-string>
 JPA_DDL_AUTO=update
+CORS_ALLOWED_ORIGINS=https://<your-frontend>.up.railway.app
+```
+*(Leave `CORS_ALLOWED_ORIGINS` placeholder or update it later once the frontend gives you its URL.)*
+
+### 3. Frontend
+1. Back in the same Railway project, click **"+ New"** → **GitHub Repo** and select the **same** repository again.
+2. Go to **Settings** → Set the **Root Directory** to `frontend`
+3. Railway auto-detects the frontend Dockerfile.
+4. Go to **Variables** and add:
+```text
+VITE_API_BASE_URL=https://<your-backend-railway-url>.up.railway.app
+```
+*(Make sure this is set **before** it finishes deploying, as this variable gets baked into the React build).*
+
+*(Note for Nginx proxy: The `nginx.conf` proxy block in the frontend is safely ignored in this setup because the browser will call the frontend's built-in fetch calls directly using the URL provided).*
+
+---
+
+## Option B: Deploy to Railway (Backend) + Vercel (Frontend)
+
+### 1. Database & Backend (Railway)
+Follow the same **Database** and **Backend** steps from Option A above, but set `CORS_ALLOWED_ORIGINS` to your future Vercel URL:
+```text
+CORS_ALLOWED_ORIGINS=https://your-frontend.vercel.app
 ```
 
-4. Railway auto-detects the Dockerfile and deploys
-
-### 3. Frontend (Vercel)
-
+### 2. Frontend (Vercel)
 1. Import this repo on [vercel.com](https://vercel.com)
 2. Set **Root Directory** to `frontend`
 3. Set **Build Command** to `npm run build`
 4. Set **Output Directory** to `dist`
 5. Add environment variable:
-
+```text
+VITE_API_BASE_URL=https://<your-backend-railway-url>.up.railway.app
 ```
-VITE_API_BASE_URL=https://your-backend.railway.app
-```
-
 6. Deploy
 
 ---
