@@ -1,5 +1,5 @@
 server:
-  port: 8080
+  port: ${SERVER_PORT:8080}
 
 spring:
   datasource:
@@ -8,16 +8,16 @@ spring:
     password: ${SPRING_DATASOURCE_PASSWORD:root}
   jpa:
     hibernate:
-      ddl-auto: update
+      ddl-auto: ${JPA_DDL_AUTO:update}
     properties:
       hibernate:
-        format_sql: true
+        format_sql: false
     open-in-view: false
   mail:
-    host: smtp.example.com
-    port: 587
-    username: your-email@example.com
-    password: your-email-password
+    host: ${MAIL_HOST:smtp.example.com}
+    port: ${MAIL_PORT:587}
+    username: ${MAIL_USERNAME:}
+    password: ${MAIL_PASSWORD:}
     properties:
       mail:
         smtp:
@@ -28,17 +28,19 @@ spring:
 app:
   security:
     jwtSecret: ${APP_SECURITY_JWTSECRET:change-this-dev-secret-at-least-32-chars-long}
-    jwtExpirationMs: 3600000
+    jwtExpirationMs: ${JWT_EXPIRATION_MS:3600000}
+  cors:
+    allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:3000,http://localhost:5173}
   notifications:
     twilio:
-      accountSid: YOUR_TWILIO_SID
-      authToken: YOUR_TWILIO_TOKEN
-      fromNumber: "+10000000000"
+      accountSid: ${TWILIO_ACCOUNT_SID:}
+      authToken: ${TWILIO_AUTH_TOKEN:}
+      fromNumber: ${TWILIO_FROM_NUMBER:}
 
 logging:
   level:
+    root: info
+    com.campus.event: info
     org.hibernate.SQL: warn
-    org.springframework.security: debug
-    org.springframework.web.cors: debug
-
-
+    org.springframework.security: warn
+    org.springframework.web.cors: warn

@@ -396,10 +396,10 @@ export default function RoomBooking() {
     <div className="max-w-6xl mx-auto px-2 sm:px-4">
       <div className="mb-8 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-slate-900">Book a Room</h1>
-          <p className="text-slate-600">Reserve conference rooms, lecture halls, and meeting spaces</p>
+          <h1 className="text-2xl font-semibold text-[#E5E7EB]">Book a Room</h1>
+          <p className="text-sm text-[#9CA3AF]">Reserve conference rooms, lecture halls, and meeting spaces</p>
         </div>
-        <div className="text-xs text-slate-500">
+        <div className="text-xs text-[#9CA3AF]">
           {isFaculty ? 'Faculty: instant approval' : 'Club: admin approval'}
         </div>
       </div>
@@ -409,18 +409,32 @@ export default function RoomBooking() {
         <div>
           <div className="card">
             <div className="flex items-center justify-between mb-4">
-              <h2 className="text-xl font-semibold">Room Reservation</h2>
-              <div className="inline-flex rounded-xl border border-slate-200 bg-white/70 p-1">
+              <h2 className="text-xl font-semibold text-[#E5E7EB]">Room Reservation</h2>
+              <div className="inline-flex rounded-xl p-1" style={{ background: '#0F172A', border: '1px solid #1F2937' }}>
                 <button
                   type="button"
-                  className={`btn btn-sm ${mode === 'event' ? 'btn-primary' : 'btn-secondary'}`}
+                  className="btn btn-sm"
+                  style={{
+                    background: mode === 'event' ? '#3B82F6' : 'transparent',
+                    color: mode === 'event' ? '#fff' : '#9CA3AF',
+                    transition: 'all 0.2s ease',
+                    borderRadius: '8px',
+                    border: 'none'
+                  }}
                   onClick={() => setMode('event')}
                 >
                   For Event
                 </button>
                 <button
                   type="button"
-                  className={`btn btn-sm ${mode === 'meeting' ? 'btn-primary' : 'btn-secondary'}`}
+                  className="btn btn-sm"
+                  style={{
+                    background: mode === 'meeting' ? '#3B82F6' : 'transparent',
+                    color: mode === 'meeting' ? '#fff' : '#9CA3AF',
+                    transition: 'all 0.2s ease',
+                    borderRadius: '8px',
+                    border: 'none'
+                  }}
                   onClick={() => setMode('meeting')}
                 >
                   For Meeting
@@ -502,8 +516,8 @@ export default function RoomBooking() {
                     {Number(pref1) > 0 && meetingDate && (
                     <div className="space-y-2">
                       <div className="flex items-center justify-between">
-                        <div className="text-sm text-slate-600">Select up to 3 consecutive slots</div>
-                        <div className="text-sm text-slate-600">
+                        <div className="text-sm text-[#9CA3AF]">Select up to 3 consecutive slots</div>
+                        <div className="text-sm text-[#9CA3AF]">
                           {fixedSlotLoading ? 'Checking availability…' : ''}
                         </div>
                       </div>
@@ -525,8 +539,8 @@ export default function RoomBooking() {
                           const slotCls = isSelected
                             ? 'bg-blue-600 text-white border-blue-700'
                             : isAvailable
-                              ? 'bg-emerald-50 text-emerald-800 border-emerald-200 hover:bg-emerald-100'
-                              : 'bg-rose-50 text-rose-800 border-rose-200'
+                              ? 'bg-emerald-900/30 text-emerald-300 border-emerald-700/40 hover:bg-emerald-900/50'
+                              : 'bg-rose-900/30 text-rose-400 border-rose-700/40'
                           return (
                             <button
                               key={slot}
@@ -549,14 +563,14 @@ export default function RoomBooking() {
                           )
                         })}
                       </div>
-                      <div className="flex flex-wrap gap-2 text-xs text-slate-600">
-                        <span className="inline-flex items-center gap-2 rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1">
+                      <div className="flex flex-wrap gap-2 text-xs text-[#9CA3AF]">
+                        <span className="inline-flex items-center gap-2 rounded-full border border-emerald-700/40 bg-emerald-900/30 text-emerald-300 px-3 py-1">
                           Available
                         </span>
-                        <span className="inline-flex items-center gap-2 rounded-full border border-rose-200 bg-rose-50 px-3 py-1">
+                        <span className="inline-flex items-center gap-2 rounded-full border border-rose-700/40 bg-rose-900/30 text-rose-400 px-3 py-1">
                           Occupied
                         </span>
-                        <span className="inline-flex items-center gap-2 rounded-full border border-blue-200 bg-blue-50 px-3 py-1">
+                        <span className="inline-flex items-center gap-2 rounded-full border border-blue-700 bg-blue-600 text-white px-3 py-1">
                           Selected
                         </span>
                       </div>
@@ -667,8 +681,8 @@ export default function RoomBooking() {
               {mode === 'event' && Number(pref1) > 0 && eventId && (
                 <div className="space-y-2">
                   <div className="flex items-center justify-between">
-                    <div className="text-sm text-slate-600">Fixed-slot availability (from weekly class timetable)</div>
-                    <div className="text-sm text-slate-600">
+                    <div className="text-sm text-[#9CA3AF]">Fixed-slot availability (from weekly class timetable)</div>
+                    <div className="text-sm text-[#9CA3AF]">
                       {fixedSlotLoading ? 'Checking availability…' : ''}
                     </div>
                   </div>
@@ -678,7 +692,7 @@ export default function RoomBooking() {
                       return (
                         <div
                           key={slot}
-                          className={`p-2 rounded-lg text-sm border ${isAvailable ? 'bg-emerald-50 border-emerald-200 text-emerald-800' : 'bg-rose-50 border-rose-200 text-rose-800'}`}
+                          className={`p-2 rounded-lg text-sm border ${isAvailable ? 'bg-emerald-900/30 border-emerald-700/40 text-emerald-300' : 'bg-rose-900/30 border-rose-700/40 text-rose-400'}`}
                         >
                           <div className="font-medium">{slot}</div>
                           <div className="text-xs">{isAvailable ? 'Available' : 'Occupied'}</div>
@@ -720,55 +734,52 @@ export default function RoomBooking() {
         {/* Sidebar */}
         <div>
           <div className="card">
-            <h3 className="text-lg font-semibold mb-4">Selected Room</h3>
+            <h3 className="text-lg font-semibold text-[#E5E7EB] mb-4">Selected Room</h3>
             {!Number(pref1) ? (
-              <div className="text-sm text-slate-600">Select a room preference to see details.</div>
+              <div className="text-center py-6">
+                <div className="text-3xl mb-3">🏢</div>
+                <p className="text-sm text-[#9CA3AF]">Select a room preference to see details.</p>
+              </div>
             ) : !selectedRoomInfo ? (
-              <div className="text-sm text-slate-600">Room details unavailable.</div>
+              <div className="text-sm text-[#9CA3AF]">Room details unavailable.</div>
             ) : (
-              <div className="space-y-2 text-sm text-slate-700">
-                <div className="flex items-start justify-between">
-                  <div>
-                    <div className="font-semibold text-slate-900">{selectedRoomInfo.name}</div>
-                    <div className="text-xs text-slate-500">{selectedRoomInfo.location || '—'}</div>
+              <div className="space-y-4">
+                <div>
+                  <div className="font-semibold text-[#E5E7EB] text-lg">{selectedRoomInfo.name}</div>
+                  <div className="text-sm text-[#9CA3AF]">{selectedRoomInfo.location || '—'}</div>
+                </div>
+                <div className="p-4 rounded-xl" style={{ background: '#0F172A', border: '1px solid #1F2937' }}>
+                  <div className="text-sm text-[#9CA3AF] mb-1">Room Capacity</div>
+                  <div className="text-2xl font-bold text-[#60A5FA] flex items-center gap-2">
+                    <span>👥</span>
+                    <span>{selectedRoomInfo.capacity} seats</span>
                   </div>
-                  <span className="text-xs bg-slate-100 text-slate-700 px-2 py-1 rounded">{selectedRoomInfo.capacity} seats</span>
                 </div>
                 {Object.keys(roomWindowAvailability).length > 0 && (
-                  <div className="text-xs">
+                  <div className="text-sm">
                     Availability in selected window:{' '}
-                    <span className={roomWindowAvailability[Number(selectedRoomInfo.id)] ? 'text-emerald-700' : 'text-rose-700'}>
-                      {roomWindowAvailability[Number(selectedRoomInfo.id)] ? 'AVAILABLE' : 'OCCUPIED'}
+                    <span className={roomWindowAvailability[Number(selectedRoomInfo.id)] ? 'text-emerald-400 font-semibold' : 'text-rose-400 font-semibold'}>
+                      {roomWindowAvailability[Number(selectedRoomInfo.id)] ? '✓ AVAILABLE' : '✗ OCCUPIED'}
                     </span>
                   </div>
                 )}
-                <button
-                  type="button"
-                  className="btn btn-secondary btn-sm"
-                  onClick={() => {
-                    setRoomConflicts([])
-                    loadRoomConflicts(Number(pref1))
-                  }}
-                >
-                  Check conflicts
-                </button>
               </div>
             )}
           </div>
 
           {roomConflicts.length > 0 && (
             <div className="card mt-6">
-              <h3 className="text-lg font-semibold mb-4">Existing Reservations for Selected Room</h3>
-              <div className="space-y-2 text-sm text-gray-700">
+              <h3 className="text-lg font-semibold text-[#E5E7EB] mb-4">Room Status</h3>
+              <div className="space-y-2 text-sm text-[#9CA3AF]">
                 {roomConflicts.map(rc => (
                   <div key={rc.id} className="flex items-center justify-between">
                     <div>
-                      <div className="font-medium">{rc.title}</div>
-                      <div className="text-xs text-gray-500">
+                      <div className="font-medium text-[#E5E7EB]">{rc.title}</div>
+                      <div className="text-xs text-[#9CA3AF]">
                         {rc.start && new Date(rc.start).toLocaleString()} – {rc.end && new Date(rc.end).toLocaleString()}
                       </div>
                     </div>
-                    <span className={`text-xs px-2 py-1 rounded-full ${rc.status === 'CONFIRMED' ? 'bg-green-100 text-green-800' : 'bg-blue-100 text-blue-800'}`}>
+                    <span className={`text-xs px-2 py-1 rounded-full ${rc.status === 'AVAILABLE' ? 'bg-emerald-900/40 text-emerald-300' : 'bg-rose-900/40 text-rose-400'}`}>
                       {rc.status}
                     </span>
                   </div>
@@ -779,8 +790,8 @@ export default function RoomBooking() {
 
           {/* Booking Guidelines */}
           <div className="card mt-6">
-            <h3 className="text-lg font-semibold mb-4">Booking Guidelines</h3>
-            <div className="text-sm text-gray-600 space-y-2">
+            <h3 className="text-lg font-semibold text-[#E5E7EB] mb-4">Booking Guidelines</h3>
+            <div className="text-sm text-[#9CA3AF] space-y-2">
               {mode === 'event' ? (
                 <>
                   <div className="flex items-start">

@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react'
 import { useAuth } from '../lib/AuthContext'
+import { showToast } from '../lib/toast'
 import api from '../lib/api'
 import { useNavigate } from 'react-router-dom'
 import Skeleton from '../ui/Skeleton'
@@ -10,6 +11,8 @@ export default function Dashboard() {
   const [createdEvents, setCreatedEvents] = useState([])
   const [bookings, setBookings] = useState([])
   const [loading, setLoading] = useState(true)
+  const [cancellingId, setCancellingId] = useState(null)
+  const [confirmId, setConfirmId] = useState(null)
   const navigate = useNavigate()
 
   const isGeneralLike = hasRole('GENERAL_USER') || hasRole('CLUB_ASSOCIATE')
@@ -66,6 +69,21 @@ export default function Dashboard() {
     if (s === 'PENDING') return 'bg-yellow-100 text-yellow-800'
     if (s === 'REJECTED') return 'bg-red-100 text-red-800'
     return 'bg-gray-100 text-gray-800'
+  }
+
+  const handleCancelEvent = async (eventId) => {
+    setCancellingId(eventId)
+    try {
+      await api.delete(`/api/events/${eventId}`)
+      setCreatedEvents(prev => prev.filter(ev => ev.id !== eventId))
+      showToast({ message: 'Event cancelled successfully', type: 'success' })
+    } catch (err) {
+      const msg = err.response?.data || 'Failed to cancel event'
+      showToast({ message: msg, type: 'error' })
+    } finally {
+      setCancellingId(null)
+      setConfirmId(null)
+    }
   }
 
   const showRegistered = isGeneralLike
@@ -215,6 +233,9 @@ export default function Dashboard() {
                 {createdEvents.map(ev => {
                   const start = ev.startTime ? new Date(ev.startTime) : null
                   const editable = start && (start.getTime() - now.getTime()) > 2 * 24 * 60 * 60 * 1000
+                  const hasStarted = start && start.getTime() <= now.getTime()
+                  const isCancelling = cancellingId === ev.id
+                  const isConfirming = confirmId === ev.id
                   return (
                     <div key={ev.id} className="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow" style={{ background: 'rgba(15,23,42,0.9)' }}>
                       <div className="flex items-start justify-between mb-2">
@@ -235,6 +256,39 @@ export default function Dashboard() {
                     <div className="text-xs text-gray-500 mt-1">
                         📍 {ev.location || 'TBD'}
                       </div>
+
+                      {/* Confirmation modal */}
+                      {isConfirming && (
+                        <div className="mt-3 p-3 rounded-lg border border-[#991B1B]/40" style={{ background: 'rgba(127,29,29,0.15)' }}>
+                          <p className="text-sm text-[#FECACA] mb-3">Are you sure you want to cancel this event?</p>
+                          <div className="flex gap-2">
+                            <button
+                              type="button"
+                              className="btn btn-sm"
+                              style={{ background: 'transparent', border: '1px solid #374151', color: '#D1D5DB' }}
+                              onClick={() => setConfirmId(null)}
+                              disabled={isCancelling}
+                            >
+                              Go Back
+                            </button>
+                            <button
+                              type="button"
+                              className="btn btn-sm"
+                              style={{ background: '#991B1B', color: '#FECACA', borderRadius: '8px' }}
+                              onClick={() => handleCancelEvent(ev.id)}
+                              disabled={isCancelling}
+                            >
+                              {isCancelling ? (
+                                <span className="flex items-center gap-2">
+                                  <span className="spinner" style={{ width: 14, height: 14, borderWidth: 2 }}></span>
+                                  Cancelling...
+                                </span>
+                              ) : 'Confirm Cancel'}
+                            </button>
+                          </div>
+                        </div>
+                      )}
+
                       <div className="mt-3 flex space-x-2">
                         <button
                           type="button"
@@ -251,6 +305,27 @@ export default function Dashboard() {
                         >
                           Notifications
                         </button>
+                        {!isConfirming && (
+                          <button
+                            type="button"
+                            className="btn btn-sm"
+                            style={{
+                              background: hasStarted ? '#374151' : '#7F1D1D',
+                              color: hasStarted ? '#6B7280' : '#FECACA',
+                              borderRadius: '8px',
+                              padding: '6px 12px',
+                              cursor: hasStarted ? 'not-allowed' : 'pointer',
+                              opacity: hasStarted ? 0.6 : 1,
+                              transition: 'all 0.2s ease',
+                            }}
+                            disabled={hasStarted}
+                            onClick={() => setConfirmId(ev.id)}
+                            onMouseEnter={(e) => { if (!hasStarted) e.target.style.background = '#991B1B' }}
+                            onMouseLeave={(e) => { if (!hasStarted) e.target.style.background = '#7F1D1D' }}
+                          >
+                            Cancel Event
+                          </button>
+                        )}
                       </div>
                     </div>
                   )
@@ -340,5 +415,3 @@ export default function Dashboard() {
     </div>
   )
 }
-
-

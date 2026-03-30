@@ -44,7 +44,7 @@ class EventServiceTest {
         when(eventRepository.save(any(Event.class))).thenAnswer(inv -> inv.getArgument(0));
 
         Event result = eventService.createEvent("Tech Talk", "A description", start, end,
-                creator, "Room 101", "CS_CLUB", "[\"name\",\"email\"]");
+                creator, "Room 101", "CS_CLUB", "[\"name\",\"email\"]", null);
 
         ArgumentCaptor<Event> captor = ArgumentCaptor.forClass(Event.class);
         verify(eventRepository).save(captor.capture());
@@ -67,7 +67,7 @@ class EventServiceTest {
 
         Event result = eventService.createEvent("Event", "Desc",
                 LocalDateTime.now().plusDays(3), LocalDateTime.now().plusDays(3).plusHours(1),
-                creator, null, null, null);
+                creator, null, null, null, null);
 
         assertEquals("TBD", result.getLocation());
     }
@@ -78,7 +78,7 @@ class EventServiceTest {
 
         Event result = eventService.createEvent("Event", "Desc",
                 LocalDateTime.now().plusDays(3), LocalDateTime.now().plusDays(3).plusHours(1),
-                creator, "   ", null, null);
+                creator, "   ", null, null, null);
 
         assertEquals("TBD", result.getLocation());
     }
@@ -89,7 +89,7 @@ class EventServiceTest {
 
         Event result = eventService.createEvent("Event", "Desc",
                 LocalDateTime.now().plusDays(3), LocalDateTime.now().plusDays(3).plusHours(1),
-                creator, "Room A", null, null);
+                creator, "Room A", null, null, null);
 
         assertEquals("CS_CLUB", result.getClubId());
     }

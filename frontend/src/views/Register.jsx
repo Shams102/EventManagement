@@ -2,6 +2,8 @@ import React, { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import api from '../lib/api'
 import { showToast } from '../lib/toast'
+import Card from '../ui/Card'
+import Button from '../ui/Button'
 
 export default function Register() {
   const [username, setUsername] = useState('')
@@ -53,16 +55,16 @@ export default function Register() {
   }
 
   return (
-    <div className="max-w-md mx-auto">
-      <div className="card p-0 overflow-hidden">
-        <div className="px-6 py-5 border-b border-slate-200 bg-gradient-to-br from-blue-50 to-white">
-          <div className="text-sm font-semibold text-blue-700">EventSphere</div>
-          <div className="mt-1 text-2xl font-bold text-slate-900">Create account</div>
-          <div className="text-sm text-slate-600">General users are registered instantly. Other roles need admin approval.</div>
+    <div className="w-full flex justify-center">
+      <Card className="w-full max-w-[520px] p-0 overflow-hidden">
+        <div className="px-8 py-7 border-b border-[#1F2937] bg-gradient-to-b from-[#111827] to-[#0F172A]">
+          <div className="text-sm font-semibold text-[#9CA3AF]">EventSphere</div>
+          <div className="mt-1 text-2xl font-semibold text-[#E5E7EB]">Create account</div>
+          <div className="text-sm text-[#9CA3AF]">General users are registered instantly. Other roles need admin approval.</div>
         </div>
 
-        <div className="p-6">
-          <form onSubmit={onSubmit} className="space-y-4">
+        <div className="p-8">
+          <form onSubmit={onSubmit} className="space-y-5">
             <div className="form-group">
               <label className="form-label">Username</label>
               <input className="form-input" value={username} onChange={(e)=>setUsername(e.target.value)} required />
@@ -75,7 +77,7 @@ export default function Register() {
                 <option value="CLUB_ASSOCIATE">Club Associate</option>
                 <option value="ADMIN">Admin</option>
               </select>
-              <div className="mt-2 text-xs text-slate-500">
+              <div className="mt-2 text-xs text-[#9CA3AF]">
                 General users can register for events. Faculty/Club/Admin roles require approval.
               </div>
             </div>
@@ -88,31 +90,34 @@ export default function Register() {
               onChange={(e)=>setEmail(e.target.value)}
               pattern="^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[A-Za-z]{2,}$"
               title="Please enter a valid email address (example@domain.com)"
+              placeholder="name@domain.com"
               required
             />
           </div>
           <div className="form-group">
             <label className="form-label">Password</label>
-            <input type="password" className="form-input" value={password} onChange={(e)=>setPassword(e.target.value)} required />
+            <input type="password" className="form-input" value={password} onChange={(e)=>setPassword(e.target.value)} placeholder="Create a password" required />
           </div>
           <div className="form-group">
             <label className="form-label">Confirm Password</label>
-            <input type="password" className="form-input" value={confirm} onChange={(e)=>setConfirm(e.target.value)} required />
+            <input type="password" className="form-input" value={confirm} onChange={(e)=>setConfirm(e.target.value)} placeholder="Repeat your password" required />
           </div>
 
             {error && <div className="alert alert-error" role="alert" aria-live="assertive">{error}</div>}
             {message && <div className="alert alert-success" role="status" aria-live="polite">{message}</div>}
 
-            <button type="submit" className="btn btn-primary w-full" disabled={loading}>
+            <Button type="submit" className="w-full" disabled={loading}>
               {loading ? 'Creating account...' : 'Create Account'}
-            </button>
+            </Button>
           </form>
 
           <div className="mt-6 text-center">
-            <p className="text-sm text-slate-600">Already have an account? <Link to="/login" className="text-blue-700 hover:underline">Sign in</Link></p>
+            <p className="text-sm text-[#9CA3AF]">
+              Already have an account? <Link to="/login" className="text-[#E5E7EB] hover:text-[#3B82F6] transition-colors">Sign in</Link>
+            </p>
           </div>
         </div>
-      </div>
+      </Card>
     </div>
   )
 }

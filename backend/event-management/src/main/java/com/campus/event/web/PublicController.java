@@ -5,6 +5,7 @@ import com.campus.event.domain.Room;
 import com.campus.event.domain.RoomBookingRequest;
 import com.campus.event.domain.RoomBookingStatus;
 import com.campus.event.repository.EventRepository;
+import com.campus.event.repository.EventRegistrationRepository;
 import com.campus.event.repository.RoomBookingRequestRepository;
 import com.campus.event.repository.RoomRepository;import org.springframework.http.ResponseEntity;import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -22,11 +23,13 @@ import java.util.stream.Collectors;
 public class PublicController {
 
     private final EventRepository eventRepository;
+    private final EventRegistrationRepository eventRegistrationRepository;
     private final RoomRepository roomRepository;
     private final RoomBookingRequestRepository bookingRepository;
 
-    public PublicController(EventRepository eventRepository, RoomRepository roomRepository, RoomBookingRequestRepository bookingRepository) {
+    public PublicController(EventRepository eventRepository, EventRegistrationRepository eventRegistrationRepository, RoomRepository roomRepository, RoomBookingRequestRepository bookingRepository) {
         this.eventRepository = eventRepository;
+        this.eventRegistrationRepository = eventRegistrationRepository;
         this.roomRepository = roomRepository;
         this.bookingRepository = bookingRepository;
     }
@@ -47,6 +50,8 @@ public class PublicController {
                         m.put("registrationSchema", e.getRegistrationSchema());
                         m.put("isPublic", e.isPublic());
                         m.put("createdBy", e.getCreatedBy() != null ? e.getCreatedBy().getUsername() : null);
+                        m.put("maxAttendees", e.getMaxAttendees());
+                        m.put("currentRegistrations", eventRegistrationRepository.findByEvent_Id(e.getId()).size());
                         return m;
                     })
                     .collect(java.util.stream.Collectors.toList());
@@ -78,6 +83,8 @@ public class PublicController {
             m.put("registrationSchema", e.getRegistrationSchema());
             m.put("isPublic", e.isPublic());
             m.put("createdBy", e.getCreatedBy() != null ? e.getCreatedBy().getUsername() : null);
+            m.put("maxAttendees", e.getMaxAttendees());
+            m.put("currentRegistrations", eventRegistrationRepository.findByEvent_Id(e.getId()).size());
             return ResponseEntity.ok(m);
         } catch (Exception ex) {
             java.io.StringWriter sw = new java.io.StringWriter();

@@ -43,6 +43,8 @@ public class Event {
 
     private String clubId;
 
+    private Integer maxAttendees;
+
     @Lob
     private String registrationSchema; // JSON array of field keys
         // Explicit getters and setters
@@ -62,6 +64,8 @@ public class Event {
         public void setLocation(String location) { this.location = location; }
         public String getClubId() { return clubId; }
         public void setClubId(String clubId) { this.clubId = clubId; }
+        public Integer getMaxAttendees() { return maxAttendees; }
+        public void setMaxAttendees(Integer maxAttendees) { this.maxAttendees = maxAttendees; }
         public String getRegistrationSchema() { return registrationSchema; }
         public void setRegistrationSchema(String registrationSchema) { this.registrationSchema = registrationSchema; }
 }
