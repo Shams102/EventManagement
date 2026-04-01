@@ -30,7 +30,7 @@ public class Registration {
     @NotBlank
     private String fullName;
 
-    @Lob
+    @Column(columnDefinition = "TEXT")
     private String answersJson;
         // Explicit getters and setters
         public Event getEvent() { return event; }

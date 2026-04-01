@@ -1,4 +1,0 @@
--------------------------------------------------------------------------------
-Test set: com.campus.event.web.EventControllerIntegrationTest
--------------------------------------------------------------------------------
-Tests run: 5, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.707 s -- in com.campus.event.web.EventControllerIntegrationTest
