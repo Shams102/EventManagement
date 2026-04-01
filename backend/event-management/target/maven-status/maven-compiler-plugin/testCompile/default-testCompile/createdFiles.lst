@@ -1,7 +1,0 @@
-com\campus\event\web\AdminControllerIntegrationTest.class
-com\campus\event\service\RegistrationServiceTest.class
-com\campus\event\service\RoomAvailabilityServiceTest.class
-com\campus\event\service\BookingServiceTest.class
-com\campus\event\service\EventServiceTest.class
-com\campus\event\web\AuthControllerIntegrationTest.class
-com\campus\event\web\EventControllerIntegrationTest.class

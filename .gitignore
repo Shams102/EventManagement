@@ -121,3 +121,8 @@ venv.bak/
 # Temporary files
 tmp/
 temp/
+
+backend/event-management/target/
+node_modules/
+dist/
+.env
