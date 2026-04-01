@@ -22,8 +22,8 @@ public interface RoomBookingRequestRepository extends JpaRepository<RoomBookingR
     
     @Query("SELECT rbr FROM RoomBookingRequest rbr WHERE rbr.allocatedRoom.id = :roomId AND " +
            "(rbr.status = 'APPROVED' OR rbr.status = 'CONFIRMED') AND " +
-           "((rbr.event IS NOT NULL AND DATE(rbr.event.startTime) = :date) OR " +
-           "(rbr.meetingStart IS NOT NULL AND DATE(rbr.meetingStart) = :date))")
+           "((rbr.event IS NOT NULL AND CAST(rbr.event.startTime AS date) = :date) OR " +
+           "(rbr.meetingStart IS NOT NULL AND CAST(rbr.meetingStart AS date) = :date))")
     List<RoomBookingRequest> findByAllocatedRoomIdAndDateBookings(@Param("roomId") Long roomId, @Param("date") LocalDate date);
     
     @Query("SELECT rbr FROM RoomBookingRequest rbr WHERE rbr.allocatedRoom.id = :roomId AND " +

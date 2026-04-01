@@ -238,6 +238,14 @@ export default function Events() {
                     <span className="mr-2">📍</span>
                     <span>Location: {event.location || 'TBD'}</span>
                   </div>
+                  <div className="flex items-center text-sm text-gray-500">
+                    <span className="mr-2">👥</span>
+                    <span>
+                      {event.maxAttendees
+                        ? `Capacity: ${event.currentRegistrations ?? 0} / ${event.maxAttendees}`
+                        : 'Unlimited capacity'}
+                    </span>
+                  </div>
                 </div>
                 
                 {canRegister(event) ? (

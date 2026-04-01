@@ -19,7 +19,7 @@ const EnhancedRoomBooking = () => {
   const [error, setError] = useState('')
   const [bookingType, setBookingType] = useState('meeting')
 
-  console.log('🔄 EnhancedRoomBooking component loaded at:', new Date().toISOString())
+
 
   // Fixed time slots - matching backend TimeSlot enum
   const timeSlots = [
@@ -53,7 +53,6 @@ const EnhancedRoomBooking = () => {
   const fetchBuildings = async () => {
     try {
       const response = await api.get('/api/room-management/buildings')
-      console.log('Buildings loaded:', response.data)
       setBuildings(response.data || [])
     } catch (error) {
       console.error('Failed to fetch buildings:', error)
@@ -64,7 +63,6 @@ const EnhancedRoomBooking = () => {
   const fetchFloors = async (buildingId) => {
     try {
       const response = await api.get(`/api/room-management/buildings/${buildingId}/floors`)
-      console.log('Floors loaded:', response.data)
       setFloors(response.data || [])
       setSelectedFloor('')
       setRooms([])
@@ -79,7 +77,6 @@ const EnhancedRoomBooking = () => {
   const fetchRooms = async (floorId) => {
     try {
       const response = await api.get(`/api/room-management/floors/${floorId}/rooms`)
-      console.log('Rooms loaded:', response.data)
       setRooms(response.data || [])
       setSelectedRoom('')
       setSelectedSlots([])
@@ -92,11 +89,9 @@ const EnhancedRoomBooking = () => {
   const checkRoomAvailability = async () => {
     try {
       setLoading(true)
-      console.log(`Checking availability for room ${selectedRoom} on ${selectedDate}`)
       const response = await api.get(
         `/api/room-management/rooms/${selectedRoom}/availability?date=${selectedDate}`
       )
-      console.log('Availability response:', response.data)
       setAvailableSlots(response.data?.availableSlots || [])
       setSelectedSlots([])
     } catch (error) {
@@ -159,8 +154,6 @@ const EnhancedRoomBooking = () => {
         meetingEnd: `${selectedDate} ${endTime}:00`
       }
 
-      console.log('Booking data:', bookingData)
-      
       const response = await api.post('/api/room-requests/meeting', bookingData)
       setMessage('Room booking request submitted successfully!')
       setSelectedSlots([])
@@ -312,13 +305,6 @@ const EnhancedRoomBooking = () => {
               </div>
             ) : (
               <>
-                {/* Debug Info */}
-                <div className="bg-gray-100 p-4 rounded-lg mb-6 text-sm">
-                  <div className="font-semibold mb-2">🔍 Debug Info:</div>
-                  <div>Available Slots: {availableSlots.length > 0 ? availableSlots.join(', ') : 'None'}</div>
-                  <div>Selected Slots: {selectedSlots.join(', ') || 'None'}</div>
-                  <div>Total Slots: {timeSlots.length}</div>
-                </div>
 
                 {/* Time Slot Grid */}
                 <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 mb-6">

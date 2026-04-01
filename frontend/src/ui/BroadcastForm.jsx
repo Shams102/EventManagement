@@ -39,13 +39,13 @@ export default function BroadcastForm({ onSent }) {
   return (
     <form onSubmit={submit} className="space-y-3" aria-live="polite">
       <div>
-        <label className="form-label">Title</label>
-        <input className={`form-input ${!title.trim() && 'border-red-200'}`} value={title} onChange={e => setTitle(e.target.value)} aria-invalid={!title.trim()} />
+        <label htmlFor="broadcast-title" className="form-label">Title</label>
+        <input id="broadcast-title" className={`form-input ${!title.trim() && 'border-red-200'}`} value={title} onChange={e => setTitle(e.target.value)} aria-invalid={!title.trim()} />
         {!title.trim() && <div className="text-xs text-red-600 mt-1">Title is required</div>}
       </div>
       <div>
-        <label className="form-label">Message</label>
-        <textarea className={`form-input h-24 ${!message.trim() && 'border-red-200'}`} rows={3} value={message} onChange={e => setMessage(e.target.value)} aria-invalid={!message.trim()} />
+        <label htmlFor="broadcast-message" className="form-label">Message</label>
+        <textarea id="broadcast-message" className={`form-input h-24 ${!message.trim() && 'border-red-200'}`} rows={3} value={message} onChange={e => setMessage(e.target.value)} aria-invalid={!message.trim()} />
         {!message.trim() && <div className="text-xs text-red-600 mt-1">Message is required</div>}
       </div>
       <div className="flex items-center gap-3">

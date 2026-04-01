@@ -16,7 +16,6 @@ import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/room-management")
-@CrossOrigin(origins = "http://localhost:5173", allowCredentials = "true")
 public class RoomManagementController {
     
     private final RoomManagementService roomManagementService;

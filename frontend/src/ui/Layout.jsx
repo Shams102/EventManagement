@@ -4,7 +4,6 @@ import { useAuth } from '../lib/AuthContext'
 import NotificationBell from './notifications/NotificationBell'
 import NotificationsDrawer from './notifications/NotificationsDrawer'
 import BroadcastModal from './BroadcastModal'
-import Toast from './Toast'
 import Container from './Container'
 import Button from './Button'
 
@@ -31,15 +30,20 @@ export default function Layout({ children }) {
   }, [user, hasRole])
   
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100">
+    <div className="min-h-screen bg-[#0B0F19] text-[#E5E7EB]">
       {/* Header */}
-      <header className="bg-slate-900/95 backdrop-blur border-b border-slate-800 sticky top-0">
+      <header className="bg-[#0B0F19]/95 backdrop-blur border-b border-[#1F2937] sticky top-0">
         <Container className="py-3">
           <div className="flex items-center justify-between">
             {/* Logo */}
             <div className="flex items-center">
-              <Link to="/" className="logo-link">
-                🎓 EventSphere
+              <Link to="/" className="logo-link flex items-center gap-2 transition-all duration-200 ease hover:opacity-95">
+                <img
+                  src="/logo.png"
+                  alt="EventSphere logo"
+                  className="h-8 w-auto transition-transform duration-200 ease hover:scale-[1.05] drop-shadow-[0_6px_18px_rgba(59,130,246,0.18)]"
+                />
+                <span>EventSphere</span>
               </Link>
             </div>
             
@@ -69,7 +73,20 @@ export default function Layout({ children }) {
                 Menu
               </Button>
               {hasRole('ADMIN') && (
-                <button className="btn btn-ghost btn-sm" title="Broadcast" onClick={() => setBroadcastOpen(true)} aria-label="Open broadcast dialog">📣</button>
+                <Button
+                  variant="primary"
+                  size="sm"
+                  className="shadow-[0_10px_30px_rgba(0,0,0,0.35)]"
+                  onClick={() => setBroadcastOpen(true)}
+                  aria-label="Open broadcast dialog"
+                >
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                    <path d="M4 13.5v-3a2 2 0 0 1 2-2h2l8-4v15l-8-4H6a2 2 0 0 1-2-2Z" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" />
+                    <path d="M18 9.5a3.5 3.5 0 0 1 0 5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+                    <path d="M20 7.5a6.5 6.5 0 0 1 0 9" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+                  </svg>
+                  Broadcast
+                </Button>
               )}
               <NotificationBell open={notificationsOpen} onOpen={() => setNotificationsOpen(true)} />
               {user ? (
@@ -97,7 +114,6 @@ export default function Layout({ children }) {
             {/* Notifications drawer (shared) */}
             <NotificationsDrawer open={notificationsOpen} onClose={() => setNotificationsOpen(false)} />
             <BroadcastModal open={broadcastOpen} onClose={() => setBroadcastOpen(false)} />
-            <Toast />
           </div>
         </Container>
 
@@ -130,7 +146,7 @@ export default function Layout({ children }) {
       </main>
       
       {/* Footer */}
-      <footer className="bg-slate-900 border-t border-slate-800 mt-12">
+      <footer className="bg-[#0B0F19] border-t border-[#1F2937] mt-12">
         <Container className="py-8">
           <div className="text-center text-slate-400">
             <p>&copy; 2024 EventSphere. Built with React &amp; Spring Boot.</p>

@@ -5,7 +5,7 @@ export default function Card({ className, children, as: Component = 'div', ...pr
   return (
     <Component
       className={cn(
-        'bg-slate-900 border border-slate-800 rounded-xl shadow-lg shadow-black/20 transition-all duration-200 hover:border-slate-700',
+        'bg-[#111827] border border-[#1F2937] rounded-2xl shadow-[0_10px_30px_rgba(0,0,0,0.5)] transition-all duration-200',
         className
       )}
       {...props}
