@@ -132,7 +132,7 @@ class EventControllerIntegrationTest {
     }
 
     @Test
-    void createEvent_noAuth_returnsForbidden() throws Exception {
+    void createEvent_noAuth_returnsUnauthorized() throws Exception {
         String body = """
                 {"title": "No Auth", "description": "Fail", "start": "%s", "end": "%s"}
                 """.formatted(
@@ -143,7 +143,7 @@ class EventControllerIntegrationTest {
         mockMvc.perform(post("/api/events")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(body))
-                .andExpect(status().isForbidden());
+                .andExpect(status().isUnauthorized());
     }
 
     @Test
