@@ -12,7 +12,7 @@ public class NotificationMessage {
 
     private String title;
 
-    @Lob
+    @Column(columnDefinition = "TEXT")
     private String message;
 
     @Enumerated(EnumType.STRING)

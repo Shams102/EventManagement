@@ -22,7 +22,7 @@ public class Notification {
 
     private String subject;
 
-    @Lob
+    @Column(columnDefinition = "TEXT")
     private String message;
 
     private LocalDateTime createdAt = LocalDateTime.now();

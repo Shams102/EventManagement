@@ -5,6 +5,8 @@ import com.campus.event.domain.Role;
 import com.campus.event.domain.User;
 import com.campus.event.repository.EventRepository;
 import com.campus.event.repository.UserRepository;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -16,6 +18,8 @@ import java.util.Set;
 @Configuration
 public class DataInitializer {
 
+    private static final Logger log = LoggerFactory.getLogger(DataInitializer.class);
+
     @Bean
     CommandLineRunner seedData(UserRepository users, EventRepository events, PasswordEncoder encoder) {
         return args -> {
@@ -25,6 +29,7 @@ public class DataInitializer {
                 if (ph != null && !ph.startsWith("$2")) {
                     u.setPasswordHash(encoder.encode(ph));
                     users.save(u);
+                    log.info("Migrated password hash for user: {}", u.getUsername());
                 }
             });
 
@@ -35,6 +40,7 @@ public class DataInitializer {
                 admin.setEmail("admin@example.com");
                 admin.setRoles(Set.of(Role.ADMIN));
                 users.save(admin);
+                log.info("Seeded admin user");
             }
 
             if (users.findByUsername("faculty").isEmpty()) {
@@ -44,6 +50,7 @@ public class DataInitializer {
                 faculty.setEmail("faculty@example.com");
                 faculty.setRoles(Set.of(Role.FACULTY));
                 users.save(faculty);
+                log.info("Seeded faculty user");
             }
 
             if (users.findByUsername("club").isEmpty()) {
@@ -53,6 +60,7 @@ public class DataInitializer {
                 club.setEmail("club@example.com");
                 club.setRoles(Set.of(Role.CLUB_ASSOCIATE));
                 users.save(club);
+                log.info("Seeded club user");
             }
 
             if (users.findByUsername("user").isEmpty()) {
@@ -62,6 +70,7 @@ public class DataInitializer {
                 user.setEmail("user@example.com");
                 user.setRoles(Set.of(Role.GENERAL_USER));
                 users.save(user);
+                log.info("Seeded general user");
             }
 
             if (events.count() == 0) {
@@ -80,9 +89,9 @@ public class DataInitializer {
                 e2.setEndTime(LocalDateTime.now().plusDays(7).withHour(17).withMinute(0));
                 e2.setPublic(true);
                 events.save(e2);
+
+                log.info("Seeded sample events");
             }
         };
     }
 }
-
-

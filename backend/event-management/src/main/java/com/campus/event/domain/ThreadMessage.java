@@ -18,7 +18,7 @@ public class ThreadMessage {
     @JoinColumn(name = "author_id")
     private User author;
 
-    @Lob
+    @Column(columnDefinition = "TEXT")
     private String content;
 
     private LocalDateTime createdAt = LocalDateTime.now();

@@ -2,8 +2,9 @@ package com.campus.event.service;
 
 import com.campus.event.domain.*;
 import com.campus.event.repository.*;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.boot.CommandLineRunner;
-import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
 
 import java.time.DayOfWeek;
@@ -11,20 +12,16 @@ import java.time.LocalTime;
 
 @Component
 public class DataInitializationService implements CommandLineRunner {
+
+    private static final Logger log = LoggerFactory.getLogger(DataInitializationService.class);
     
     private final RoomManagementService roomManagementService;
     private final ScheduleService scheduleService;
-    private final UserRepository userRepository;
-    private final PasswordEncoder passwordEncoder;
     
     public DataInitializationService(RoomManagementService roomManagementService,
-                                   ScheduleService scheduleService,
-                                   UserRepository userRepository,
-                                   PasswordEncoder passwordEncoder) {
+                                   ScheduleService scheduleService) {
         this.roomManagementService = roomManagementService;
         this.scheduleService = scheduleService;
-        this.userRepository = userRepository;
-        this.passwordEncoder = passwordEncoder;
     }
     
     @Override
@@ -34,9 +31,6 @@ public class DataInitializationService implements CommandLineRunner {
         
         // Add some sample fixed timetable entries
         addSampleFixedTimetable();
-        
-        // Create admin user if not exists
-        createAdminUser();
     }
     
     private void addSampleFixedTimetable() {
@@ -106,7 +100,7 @@ public class DataInitializationService implements CommandLineRunner {
             }
         } catch (Exception e) {
             // Classes might already exist, ignore
-            System.out.println("Sample timetable classes might already exist: " + e.getMessage());
+            log.debug("Sample timetable seeding skipped: {}", e.getMessage());
         }
     }
     
@@ -129,19 +123,7 @@ public class DataInitializationService implements CommandLineRunner {
             scheduleService.addFixedClass(request);
         } catch (Exception e) {
             // Class might already exist, ignore
-            System.out.println("Class might already exist: " + courseName);
-        }
-    }
-    
-    private void createAdminUser() {
-        if (!userRepository.existsByUsername("admin")) {
-            User admin = new User();
-            admin.setUsername("admin");
-            admin.setEmail("admin@campus.edu");
-            admin.setPasswordHash(passwordEncoder.encode("admin123"));
-            admin.setRoles(java.util.Set.of(Role.ADMIN));
-            userRepository.save(admin);
-            System.out.println("Admin user created: admin/admin123");
+            log.debug("Fixed class already exists: {}", courseName);
         }
     }
 }

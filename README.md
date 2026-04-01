@@ -1,6 +1,6 @@
 # Event Management System
 
-A comprehensive event management platform built with a modern tech stack to facilitate event creation, booking, and management.
+A comprehensive event management platform built with a modern tech stack to facilitate event creation, room booking, timetable management, and notifications.
 
 ## Tech Stack
 
@@ -9,35 +9,40 @@ A comprehensive event management platform built with a modern tech stack to faci
 - Tailwind CSS
 - React Router
 - Axios for API calls
+- Framer Motion for animations
 
 ### Backend
 - Java 17
 - Spring Boot 3.3.4
 - Spring Security (JWT Authentication)
 - Spring Data JPA
-- MySQL Database
+- PostgreSQL Database
 - Maven
 - Role-Based Access Control (RBAC)
 
 ## Features
 
 - **User Authentication**: Login, registration with role-based access
-- **Event Management**: Create, view, and manage events
-- **Room Booking**: Book rooms for events
+- **Event Management**: Create, view, edit, and cancel events
+- **Room Booking**: Book rooms with preference-based allocation
+- **Timetable Management**: Fixed class schedules with conflict detection
+- **Notifications**: In-app, email, and SMS notifications with threading
 - **Role-Based Access Control**: 
-  - GENERAL_USER: Basic access
-  - FACULTY: Enhanced permissions
-  - CLUB_ASSOCIATE: Club management features
-  - ADMIN: Full system access
+  - GENERAL_USER: Basic access, event registration
+  - FACULTY: Room booking, event creation
+  - CLUB_ASSOCIATE: Club event management
+  - ADMIN: Full system access, approvals
 
 ## Project Structure
 
 ```
 EventManagement/
-├── frontend/                    # React frontend application
+├── frontend/                     # React frontend application
 ├── backend/event-management/     # Spring Boot backend API
-├── .gitignore                   # Git ignore file
-└── README.md                    # This file
+├── docker-compose.yml            # Docker Compose for local development
+├── .env.example                  # Environment variables template
+├── DEPLOYMENT.md                 # Full deployment guide
+└── README.md                     # This file
 ```
 
 ## Getting Started
@@ -45,9 +50,9 @@ EventManagement/
 ### Prerequisites
 - Java 17 or higher
 - Maven 3.6 or higher
-- Node.js (v14 or higher)
-- npm or yarn
-- MySQL Database
+- Node.js (v18 or higher)
+- npm
+- PostgreSQL 15+
 
 ### Installation
 
@@ -61,32 +66,56 @@ cd EventManagement
 ```bash
 cd backend/event-management
 # Configure database connection in src/main/resources/application.yml
+# Or set environment variables (see .env.example)
 mvn clean install
 ```
 
 3. Install frontend dependencies:
 ```bash
-cd ../frontend
+cd frontend
 npm install
 ```
 
 ### Running the Application
 
-1. Start the backend server:
+1. Start PostgreSQL and create a database:
+```bash
+# Using psql or pgAdmin, create the database:
+CREATE DATABASE campus_events;
+```
+
+2. Start the backend server:
 ```bash
 cd backend/event-management
 mvn spring-boot:run
 ```
 
-2. Start the frontend development server:
+3. Start the frontend development server:
 ```bash
 cd frontend
 npm run dev
 ```
 
 The application will be available at:
-- Frontend: http://localhost:5173 (Vite default)
-- Backend API: http://localhost:8080 (Spring Boot default)
+- Frontend: http://localhost:3000
+- Backend API: http://localhost:8080
+
+### Using Docker Compose
+
+```bash
+cp .env.example .env
+# Edit .env — at minimum change POSTGRES_PASSWORD and APP_SECURITY_JWTSECRET
+docker compose up -d --build
+```
+
+## Demo Accounts
+
+| Username | Password     | Role            |
+|----------|-------------|-----------------|
+| admin    | Admin@123   | ADMIN           |
+| faculty  | Faculty@123 | FACULTY         |
+| club     | Club@123    | CLUB_ASSOCIATE  |
+| user     | User@123    | GENERAL_USER    |
 
 ## Authentication Flow
 
@@ -95,12 +124,9 @@ The application will be available at:
   - GENERAL_USER → Home page (/)
   - FACULTY/CLUB_ASSOCIATE/ADMIN → Dashboard (/dashboard)
 
-## Protected Routes
+## Deployment
 
-- `/dashboard` - User dashboard
-- `/bookings` - Booking management
-- `/register/:eventId` - Event registration
-- `/book-room` - Room booking
+For detailed deployment instructions targeting **Render** (backend + PostgreSQL) and **Vercel** (frontend), see [DEPLOYMENT.md](DEPLOYMENT.md).
 
 ## Contributing
 

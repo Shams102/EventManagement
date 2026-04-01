@@ -45,7 +45,7 @@ public class Event {
 
     private Integer maxAttendees;
 
-    @Lob
+    @Column(columnDefinition = "TEXT")
     private String registrationSchema; // JSON array of field keys
         // Explicit getters and setters
         public String getTitle() { return title; }
