@@ -1,7 +1,6 @@
 package com.campus.event.domain;
 
 import jakarta.persistence.*;
-import jakarta.validation.constraints.Future;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import lombok.Getter;
@@ -30,8 +29,12 @@ public class Event {
     private LocalDateTime startTime;
 
     @NotNull
-    @Future
     private LocalDateTime endTime;
+
+    @Transient
+    public boolean isMultiDay() {
+        return startTime != null && endTime != null && !startTime.toLocalDate().isEqual(endTime.toLocalDate());
+    }
 
     private boolean isPublic = true;
 

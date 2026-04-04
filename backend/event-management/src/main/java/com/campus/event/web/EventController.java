@@ -64,7 +64,7 @@ public class EventController {
     }
 
     @GetMapping("/mine")
-    @PreAuthorize("hasAnyRole('ADMIN','FACULTY','CLUB_ASSOCIATE')")
+    @PreAuthorize("hasAnyRole('ADMIN','FACULTY','CLUB_ASSOCIATE','CENTRAL_ADMIN','BUILDING_ADMIN')")
     public ResponseEntity<List<java.util.Map<String, Object>>> myEvents(@AuthenticationPrincipal UserDetails principal) {
         List<Event> events = eventRepository.findByCreatedBy_Username(principal.getUsername());
         List<java.util.Map<String, Object>> body = events.stream().map(e -> {

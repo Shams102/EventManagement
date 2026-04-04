@@ -104,6 +104,11 @@ export default function Login() {
                   {showPassword ? 'Hide' : 'Show'}
                 </Button>
               </div>
+              <div className="flex justify-end mt-2">
+                <Link to="/forgot-password" className="text-xs text-[#3B82F6] hover:underline">
+                  Forgot password?
+                </Link>
+              </div>
             </div>
 
             {error && (
@@ -134,7 +139,9 @@ export default function Login() {
             <div className="rounded-2xl border border-[#1F2937] bg-[#0F172A] p-4">
               <div className="text-xs font-semibold text-[#E5E7EB]">Demo accounts</div>
               <div className="mt-2 grid grid-cols-1 gap-1 text-xs text-[#9CA3AF]">
-                <div><span className="font-medium text-[#E5E7EB]">admin</span> / Admin@123</div>
+                <div><span className="font-medium text-[#E5E7EB]">central_admin</span> / Central@123</div>
+                <div><span className="font-medium text-[#E5E7EB]">ab1_admin</span> / Admin@AB1</div>
+                <div><span className="font-medium text-[#E5E7EB]">ab2_admin</span> / Admin@AB2</div>
                 <div><span className="font-medium text-[#E5E7EB]">faculty</span> / Faculty@123</div>
                 <div><span className="font-medium text-[#E5E7EB]">club</span> / Club@123</div>
                 <div><span className="font-medium text-[#E5E7EB]">user</span> / User@123</div>

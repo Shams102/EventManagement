@@ -22,9 +22,10 @@ export default function Layout({ children }) {
       { to: '/dashboard', label: 'Dashboard', show: !!user },
       { to: '/events', label: 'Events', show: true },
       { to: '/bookings', label: 'Bookings', show: !!user && (hasRole('FACULTY') || hasRole('CLUB_ASSOCIATE') || hasRole('ADMIN')) },
-      { to: '/enhanced-book-room', label: 'Book Room', show: !!user && (hasRole('FACULTY') || hasRole('CLUB_ASSOCIATE') || hasRole('ADMIN')) },
+      { to: '/enhanced-book-room', label: 'Book Room', show: !!user && (hasRole('FACULTY') || hasRole('CLUB_ASSOCIATE') || hasRole('ADMIN') || hasRole('CENTRAL_ADMIN') || hasRole('BUILDING_ADMIN')) },
       { to: '/admin/role-requests', label: 'Admin', show: !!user && hasRole('ADMIN') },
-      { to: '/admin/room-approvals', label: 'Room Approvals', show: !!user && hasRole('ADMIN') },
+      { to: '/admin/room-approvals', label: 'Room Approvals', show: !!user && (hasRole('ADMIN') || hasRole('CENTRAL_ADMIN') || hasRole('BUILDING_ADMIN')) },
+      { to: '/profile', label: 'Profile', show: !!user },
     ]
     return items.filter(i => i.show)
   }, [user, hasRole])
@@ -91,7 +92,16 @@ export default function Layout({ children }) {
               <NotificationBell open={notificationsOpen} onOpen={() => setNotificationsOpen(true)} />
               {user ? (
                 <div className="flex items-center space-x-3">
-                  <span className="hidden sm:inline text-sm text-slate-300">Welcome, {user.sub}</span>
+                  <Link to="/profile" aria-label="Profile">
+                    <Button variant="secondary" size="sm" className="gap-2">
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                        <path d="M20 21a8 8 0 1 0-16 0" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+                        <path d="M12 13a4 4 0 1 0 0-8 4 4 0 0 0 0 8Z" stroke="currentColor" strokeWidth="2" />
+                      </svg>
+                      <span className="hidden sm:inline">Profile</span>
+                      <span className="sm:hidden">{user.sub}</span>
+                    </Button>
+                  </Link>
                   <Button 
                     onClick={logout}
                     variant="secondary"

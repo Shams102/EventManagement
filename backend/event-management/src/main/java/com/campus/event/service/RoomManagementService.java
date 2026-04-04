@@ -83,62 +83,64 @@ public class RoomManagementService {
     }
     
     // Initialize default building structure
-    public void initializeDefaultBuilding() {
-        Building mainBuilding = null;
+    // Initialize building structures
+    public void initializeBuildings() {
+        Building ab1 = null;
+        Building ab2 = null;
 
         if (buildingRepository.count() == 0) {
-            mainBuilding = createBuilding("RLHC (Main Building)", "RLHC", "Main College Building");
+            ab1 = createBuilding("Academic Block 1", "AB1", "Main Academic Block");
+            ab2 = createBuilding("Academic Block 2", "AB2", "Engineering Block");
         } else {
             List<Building> buildings = buildingRepository.findByIsActiveTrue();
-            if (!buildings.isEmpty()) {
-                mainBuilding = buildings.get(0);
-            }
+            if (buildings.size() >= 1) ab1 = buildings.get(0);
+            if (buildings.size() >= 2) ab2 = buildings.get(1);
         }
 
-        if (mainBuilding == null) {
-            return;
-        }
+        if (ab1 != null) setupBuildingFloorsAndRooms(ab1, "AB1", true);
+        if (ab2 != null) setupBuildingFloorsAndRooms(ab2, "AB2", false);
+    }
 
-        if (roomRepository.count() > 0) {
-            return;
-        }
-
-        List<Floor> existingFloors = floorRepository.findByBuildingIdOrderByFloorNumberAsc(mainBuilding.getId());
+    private void setupBuildingFloorsAndRooms(Building building, String prefix, boolean hasAuditorium) {
+        List<Floor> existingFloors = floorRepository.findByBuildingIdOrderByFloorNumberAsc(building.getId());
         if (existingFloors.isEmpty()) {
             for (int i = 0; i < 3; i++) {
                 String floorName = i == 0 ? "Ground Floor" : (i == 1 ? "First Floor" : "Second Floor");
-                Floor floor = createFloor(mainBuilding.getId(), i, floorName);
-                createSampleRooms(floor);
+                Floor floor = createFloor(building.getId(), i, floorName);
+                createSampleRooms(floor, prefix, hasAuditorium);
             }
             return;
         }
 
         for (Floor floor : existingFloors) {
             if (roomRepository.findByFloorIdOrderByRoomNumberAsc(floor.getId()).isEmpty()) {
-                createSampleRooms(floor);
+                createSampleRooms(floor, prefix, hasAuditorium);
             }
         }
     }
     
-    private void createSampleRooms(Floor floor) {
+    private void createSampleRooms(Floor floor, String prefix, boolean hasAuditorium) {
         List<Room> sampleRooms = new ArrayList<>();
         
         if (floor.getFloorNumber() == 0) { // Ground Floor
-            sampleRooms.add(new Room("RLHC0101", "Lecture Hall 1", RoomType.LECTURE_HALL, 120, floor));
-            sampleRooms.add(new Room("RLHC0102", "Lecture Hall 2", RoomType.LECTURE_HALL, 120, floor));
-            sampleRooms.add(new Room("RLHC0103", "Computer Lab 1", RoomType.LAB, 60, floor));
-            sampleRooms.add(new Room("RLHC0104", "Computer Lab 2", RoomType.LAB, 60, floor));
+            sampleRooms.add(new Room(prefix + "0101", "Lecture Hall 1", RoomType.LECTURE_HALL, 120, floor));
+            sampleRooms.add(new Room(prefix + "0102", "Lecture Hall 2", RoomType.LECTURE_HALL, 120, floor));
+            sampleRooms.add(new Room(prefix + "0103", "Computer Lab 1", RoomType.LAB, 60, floor));
+            sampleRooms.add(new Room(prefix + "0104", "Computer Lab 2", RoomType.LAB, 60, floor));
+            if (hasAuditorium) {
+                sampleRooms.add(new Room(prefix + "0105", "Main Auditorium", RoomType.AUDITORIUM, 300, floor));
+            }
         } else if (floor.getFloorNumber() == 1) { // First Floor
-            sampleRooms.add(new Room("RLHC0201", "Classroom 1", RoomType.CLASSROOM, 40, floor));
-            sampleRooms.add(new Room("RLHC0202", "Classroom 2", RoomType.CLASSROOM, 40, floor));
-            sampleRooms.add(new Room("RLHC0203", "Seminar Hall", RoomType.SEMINAR_HALL, 80, floor));
-            sampleRooms.add(new Room("RLHC0204", "Meeting Room 1", RoomType.MEETING_ROOM, 20, floor));
-            sampleRooms.add(new Room("RLHC0205", "Meeting Room 2", RoomType.MEETING_ROOM, 20, floor));
+            sampleRooms.add(new Room(prefix + "0201", "Classroom 1", RoomType.CLASSROOM, 40, floor));
+            sampleRooms.add(new Room(prefix + "0202", "Classroom 2", RoomType.CLASSROOM, 40, floor));
+            sampleRooms.add(new Room(prefix + "0203", "Seminar Hall", RoomType.SEMINAR_HALL, 80, floor));
+            sampleRooms.add(new Room(prefix + "0204", "Meeting Room 1", RoomType.MEETING_ROOM, 20, floor));
+            sampleRooms.add(new Room(prefix + "0205", "Meeting Room 2", RoomType.MEETING_ROOM, 20, floor));
         } else { // Second Floor
-            sampleRooms.add(new Room("RLHC0301", "Classroom 3", RoomType.CLASSROOM, 40, floor));
-            sampleRooms.add(new Room("RLHC0302", "Classroom 4", RoomType.CLASSROOM, 40, floor));
-            sampleRooms.add(new Room("RLHC0303", "Physics Lab", RoomType.LAB, 30, floor));
-            sampleRooms.add(new Room("RLHC0304", "Chemistry Lab", RoomType.LAB, 30, floor));
+            sampleRooms.add(new Room(prefix + "0301", "Classroom 3", RoomType.CLASSROOM, 40, floor));
+            sampleRooms.add(new Room(prefix + "0302", "Classroom 4", RoomType.CLASSROOM, 40, floor));
+            sampleRooms.add(new Room(prefix + "0303", "Physics Lab", RoomType.LAB, 30, floor));
+            sampleRooms.add(new Room(prefix + "0304", "Chemistry Lab", RoomType.LAB, 30, floor));
         }
         
         for (Room room : sampleRooms) {

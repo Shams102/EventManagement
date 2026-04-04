@@ -19,6 +19,9 @@ import AdminBroadcast from '../views/AdminBroadcast'
 import StyleGuide from '../views/StyleGuide'
 import NotificationsPage from '../views/NotificationsPage'
 import ThreadChatPage from '../views/ThreadChatPage'
+import ForgotPassword from '../views/ForgotPassword'
+import ResetPassword from '../views/ResetPassword'
+import Profile from '../views/Profile'
 import { AnimatePresence } from 'framer-motion'
 import Toast from '../ui/Toast'
 
@@ -33,18 +36,21 @@ function AppRoutes() {
         <Route path="/register" element={<Register />} />
         <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
         <Route path="/events" element={<Events />} />
-        <Route path="/events/create" element={<ProtectedRoute roles={['FACULTY','CLUB_ASSOCIATE','ADMIN']}><CreateEvent /></ProtectedRoute>} />
-        <Route path="/events/edit/:id" element={<ProtectedRoute roles={['FACULTY','CLUB_ASSOCIATE','ADMIN']}><EventEdit /></ProtectedRoute>} />
+        <Route path="/events/create" element={<ProtectedRoute roles={['FACULTY','CLUB_ASSOCIATE','ADMIN','CENTRAL_ADMIN','BUILDING_ADMIN']}><CreateEvent /></ProtectedRoute>} />
+        <Route path="/events/edit/:id" element={<ProtectedRoute roles={['FACULTY','CLUB_ASSOCIATE','ADMIN','CENTRAL_ADMIN','BUILDING_ADMIN']}><EventEdit /></ProtectedRoute>} />
         <Route path="/bookings" element={<ProtectedRoute roles={['FACULTY','CLUB_ASSOCIATE','ADMIN']}><Bookings /></ProtectedRoute>} />
         <Route path="/register/:eventId" element={<ProtectedRoute roles={['GENERAL_USER','CLUB_ASSOCIATE','FACULTY','ADMIN']}><EventRegistration /></ProtectedRoute>} />
         <Route path="/events/:eventId/register" element={<ProtectedRoute roles={['GENERAL_USER','CLUB_ASSOCIATE','FACULTY','ADMIN']}><EventRegistration /></ProtectedRoute>} />
-        <Route path="/book-room" element={<ProtectedRoute roles={['FACULTY','CLUB_ASSOCIATE','ADMIN']}><RoomBooking /></ProtectedRoute>} />
-        <Route path="/enhanced-book-room" element={<ProtectedRoute roles={['FACULTY','CLUB_ASSOCIATE','ADMIN']}><RoomBooking /></ProtectedRoute>} />
+        <Route path="/book-room" element={<ProtectedRoute roles={['FACULTY','CLUB_ASSOCIATE','ADMIN','CENTRAL_ADMIN','BUILDING_ADMIN']}><RoomBooking /></ProtectedRoute>} />
+        <Route path="/enhanced-book-room" element={<ProtectedRoute roles={['FACULTY','CLUB_ASSOCIATE','ADMIN','CENTRAL_ADMIN','BUILDING_ADMIN']}><RoomBooking /></ProtectedRoute>} />
         <Route path="/admin/role-requests" element={<ProtectedRoute roles={['ADMIN']}><AdminRoleRequests /></ProtectedRoute>} />
-        <Route path="/admin/room-approvals" element={<ProtectedRoute roles={['ADMIN']}><AdminRoomApprovals /></ProtectedRoute>} />
+        <Route path="/admin/room-approvals" element={<ProtectedRoute roles={['ADMIN', 'CENTRAL_ADMIN', 'BUILDING_ADMIN']}><AdminRoomApprovals /></ProtectedRoute>} />
         <Route path="/admin/notifications" element={<ProtectedRoute roles={[ 'ADMIN' ]}><AdminBroadcast /></ProtectedRoute>} />
         <Route path="/notifications" element={<ProtectedRoute><NotificationsPage /></ProtectedRoute>} />
         <Route path="/notifications/threads/:threadId" element={<ProtectedRoute><ThreadChatPage /></ProtectedRoute>} />
+        <Route path="/forgot-password" element={<ForgotPassword />} />
+        <Route path="/reset-password" element={<ResetPassword />} />
+        <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
         <Route path="/style-guide" element={<StyleGuide />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>

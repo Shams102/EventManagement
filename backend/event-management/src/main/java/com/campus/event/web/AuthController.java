@@ -1,5 +1,6 @@
 package com.campus.event.web;
 
+import com.campus.event.domain.PasswordResetToken;
 import com.campus.event.domain.Role;
 import com.campus.event.domain.User;
 import com.campus.event.repository.UserRepository;
@@ -14,6 +15,8 @@ import org.springframework.web.bind.annotation.*;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
+import java.time.LocalDateTime;
 
 @RestController
 @RequestMapping("/api/auth")
@@ -25,12 +28,14 @@ public class AuthController {
     private final JwtTokenService jwtTokenService;
     private final com.campus.event.service.CustomUserDetailsService userDetailsService;
     private final org.springframework.security.crypto.password.PasswordEncoder passwordEncoder;
+    private final com.campus.event.repository.PasswordResetTokenRepository tokenRepository;
 
-    public AuthController(UserRepository userRepository, JwtTokenService jwtTokenService, com.campus.event.service.CustomUserDetailsService userDetailsService, org.springframework.security.crypto.password.PasswordEncoder passwordEncoder) {
+    public AuthController(UserRepository userRepository, JwtTokenService jwtTokenService, com.campus.event.service.CustomUserDetailsService userDetailsService, org.springframework.security.crypto.password.PasswordEncoder passwordEncoder, com.campus.event.repository.PasswordResetTokenRepository tokenRepository) {
         this.userRepository = userRepository;
         this.jwtTokenService = jwtTokenService;
         this.userDetailsService = userDetailsService;
         this.passwordEncoder = passwordEncoder;
+        this.tokenRepository = tokenRepository;
     }
 
     @PostMapping("/login")
@@ -92,5 +97,58 @@ public class AuthController {
             return ResponseEntity.ok(Map.of("message", "Registered. Awaiting admin approval for role: " + user.getRequestedRole()));
         }
         return ResponseEntity.ok(Map.of("message", "Registered"));
+    }
+
+    @PostMapping("/forgot-password")
+    public ResponseEntity<?> forgotPassword(@RequestBody Map<String, String> request) {
+        String email = request.get("email");
+        if (email == null) {
+            return ResponseEntity.badRequest().body(Map.of("error", "Email is required"));
+        }
+        
+        userRepository.findByEmail(email).ifPresent(user -> {
+            String token = UUID.randomUUID().toString();
+            PasswordResetToken resetToken = new PasswordResetToken(token, user, LocalDateTime.now().plusMinutes(30));
+            tokenRepository.save(resetToken);
+            
+            // In a real app, send email with Spring Mail.
+            // For now, log the token to console.
+            log.info("Password reset requested for {}. Token: {}", email, token);
+            System.out.println("=================================================");
+            System.out.println("PASSWORD RESET LINK: http://localhost:5173/reset-password?token=" + token);
+            System.out.println("=================================================");
+        });
+        
+        // Always return success to prevent email enumeration
+        return ResponseEntity.ok(Map.of("message", "If your email is registered, you will receive a reset link shortly."));
+    }
+
+    @PostMapping("/reset-password")
+    public ResponseEntity<?> resetPassword(@RequestBody Map<String, String> request) {
+        String token = request.get("token");
+        String newPassword = request.get("newPassword");
+        
+        if (token == null || newPassword == null) {
+            return ResponseEntity.badRequest().body(Map.of("error", "Token and new password are required"));
+        }
+        
+        var resetTokenOpt = tokenRepository.findByToken(token);
+        if (resetTokenOpt.isEmpty()) {
+            return ResponseEntity.badRequest().body(Map.of("error", "Invalid token"));
+        }
+        
+        PasswordResetToken resetToken = resetTokenOpt.get();
+        if (resetToken.isUsed() || resetToken.getExpiryDate().isBefore(LocalDateTime.now())) {
+            return ResponseEntity.badRequest().body(Map.of("error", "Token has expired or already been used"));
+        }
+        
+        User user = resetToken.getUser();
+        user.setPasswordHash(passwordEncoder.encode(newPassword));
+        userRepository.save(user);
+        
+        resetToken.setUsed(true);
+        tokenRepository.save(resetToken);
+        
+        return ResponseEntity.ok(Map.of("message", "Password successfully reset"));
     }
 }

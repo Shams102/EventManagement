@@ -27,11 +27,13 @@ public class RoomBookingRequestController {
     private final RoomBookingRequestRepository requestRepo;
     private final EventRepository eventRepo;
     private final RoomRepository roomRepo;
+    private final com.campus.event.service.ScheduleService scheduleService;
 
-    public RoomBookingRequestController(RoomBookingRequestRepository requestRepo, EventRepository eventRepo, RoomRepository roomRepo) {
+    public RoomBookingRequestController(RoomBookingRequestRepository requestRepo, EventRepository eventRepo, RoomRepository roomRepo, com.campus.event.service.ScheduleService scheduleService) {
         this.requestRepo = requestRepo;
         this.eventRepo = eventRepo;
         this.roomRepo = roomRepo;
+        this.scheduleService = scheduleService;
     }
 
     public static class CreateRequest {
@@ -100,7 +102,15 @@ public class RoomBookingRequestController {
         rr.setStatus(RoomBookingStatus.PENDING);
         rr.setRequestedByUsername(principal.getUsername());
         RoomBookingRequest saved = requestRepo.save(rr);
-        return ResponseEntity.ok(Map.of("id", saved.getId(), "status", saved.getStatus().name()));
+        
+        Map<String, List<String>> conflicts = null;
+        if (eventMode && event != null) {
+            conflicts = scheduleService.validateEventRoomPreferences(req.pref1RoomId, req.pref2RoomId, req.pref3RoomId, event.getStartTime(), event.getEndTime());
+        } else {
+            conflicts = scheduleService.validateEventRoomPreferences(req.pref1RoomId, req.pref2RoomId, req.pref3RoomId, req.meetingStart, req.meetingEnd);
+        }
+        
+        return ResponseEntity.ok(Map.of("id", saved.getId(), "status", saved.getStatus().name(), "conflicts", conflicts));
     }
 
     @PostMapping("/meeting")

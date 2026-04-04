@@ -11,6 +11,8 @@ export default function RoomBooking() {
   const [rooms, setRooms] = useState([])
   const [roomsLoading, setRoomsLoading] = useState(false)
   const [roomsError, setRoomsError] = useState('')
+  const [buildings, setBuildings] = useState([])
+  const [selectedBuildingId, setSelectedBuildingId] = useState('')
   const [events, setEvents] = useState([])
   const [eventsLoading, setEventsLoading] = useState(false)
   const [eventsError, setEventsError] = useState('')
@@ -56,9 +58,10 @@ export default function RoomBooking() {
     setRoomsError('')
     setEventsError('')
     try {
-      const [roomsRes, eventsRes] = await Promise.allSettled([
+      const [roomsRes, eventsRes, buildingsRes] = await Promise.allSettled([
         api.get('/api/rooms'),
-        api.get('/api/events/mine')
+        api.get('/api/events/mine'),
+        api.get('/api/room-management/buildings')
       ])
 
       if (roomsRes.status === 'fulfilled') {
@@ -77,6 +80,10 @@ export default function RoomBooking() {
         const data = eventsRes.reason?.response?.data
         const msg = (data && (data.error || data.message)) ? (data.error || data.message) : (eventsRes.reason?.message || 'Failed to load events')
         setEventsError(String(msg))
+      }
+
+      if (buildingsRes.status === 'fulfilled') {
+        setBuildings(buildingsRes.value.data || [])
       }
     } finally {
       setRoomsLoading(false)
@@ -385,6 +392,7 @@ export default function RoomBooking() {
     }
   }
 
+  const filteredRooms = selectedBuildingId ? rooms.filter(r => String(r.buildingId) === String(selectedBuildingId)) : rooms;
   const selectedRoomInfo = rooms.find(room => room.id === Number(pref1))
 
   const isErrorMessage = (m) => {
@@ -590,6 +598,23 @@ export default function RoomBooking() {
                 </>
               )}
 
+              <div className="form-group">
+                <label className="form-label">Building Filter (Optional)</label>
+                <select
+                  className="form-select"
+                  value={selectedBuildingId}
+                  onChange={(e) => {
+                    setSelectedBuildingId(e.target.value);
+                    setPref1(''); setPref2(''); setPref3('');
+                  }}
+                >
+                  <option value="">All Buildings</option>
+                  {buildings.map(b => (
+                    <option key={b.id} value={b.id}>{b.name}</option>
+                  ))}
+                </select>
+              </div>
+
               <div className={`grid grid-cols-1 ${isFaculty || mode === 'meeting' ? 'md:grid-cols-1' : 'md:grid-cols-3'} gap-4`}>
                 <div className="form-group">
                   <label className="form-label">{isFaculty ? 'Select Room' : 'Preference 1'}</label>
@@ -605,7 +630,7 @@ export default function RoomBooking() {
                     required
                   >
                     <option value="">Choose a room...</option>
-                    {rooms.map(room => {
+                    {filteredRooms.map(room => {
                       const ok = roomWindowAvailability[Number(room.id)]
                       const hasWindow = Object.keys(roomWindowAvailability).length > 0
                       const disabled = hasWindow ? !ok : false
@@ -638,7 +663,7 @@ export default function RoomBooking() {
                         required
                       >
                         <option value="">Choose a room...</option>
-                        {rooms.map(room => {
+                        {filteredRooms.map(room => {
                           const ok = roomWindowAvailability[Number(room.id)]
                           const hasWindow = Object.keys(roomWindowAvailability).length > 0
                           const disabled = hasWindow ? !ok : false
@@ -661,7 +686,7 @@ export default function RoomBooking() {
                         required
                       >
                         <option value="">Choose a room...</option>
-                        {rooms.map(room => {
+                        {filteredRooms.map(room => {
                           const ok = roomWindowAvailability[Number(room.id)]
                           const hasWindow = Object.keys(roomWindowAvailability).length > 0
                           const disabled = hasWindow ? !ok : false

@@ -42,7 +42,7 @@ export default function CreateEvent() {
     return `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`
   }
 
-  const allowed = hasRole('ADMIN') || hasRole('FACULTY') || hasRole('CLUB_ASSOCIATE')
+  const allowed = hasRole('ADMIN') || hasRole('FACULTY') || hasRole('CLUB_ASSOCIATE') || hasRole('CENTRAL_ADMIN') || hasRole('BUILDING_ADMIN')
   const isFormValid = title.trim() && startDate && startTime && endDate && endTime
 
   const toggleField = (key) => {
@@ -160,6 +160,11 @@ export default function CreateEvent() {
                     />
                     <TimeSelect value={endTime} onChange={setEndTime} required />
                   </div>
+                  {startDate && endDate && startDate !== endDate && (
+                    <div className="mt-2 text-xs font-medium text-purple-400">
+                      ✨ This will be a multi-day event
+                    </div>
+                  )}
                 </div>
               </div>
 

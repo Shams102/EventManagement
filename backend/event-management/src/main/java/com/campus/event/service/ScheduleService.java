@@ -45,6 +45,9 @@ public class ScheduleService {
     }
     
     public FixedTimetable addFixedClass(FixedTimetableRequest request) {
+        if (request.getRoomId() == null) {
+            throw new IllegalArgumentException("Room ID cannot be null");
+        }
         Room room = roomRepository.findById(request.getRoomId())
             .orElseThrow(() -> new IllegalArgumentException("Room not found"));
             
@@ -86,6 +89,53 @@ public class ScheduleService {
         List<RoomBookingRequest> conflictingBookings = bookingRepository.findConflictingBookings(roomId, 
             LocalDateTime.of(date, startTime), LocalDateTime.of(date, endTime));
         return !conflictingBookings.isEmpty();
+    }
+    
+    public Map<String, List<String>> validateEventRoomPreferences(Long pref1Id, Long pref2Id, Long pref3Id, LocalDateTime startTime, LocalDateTime endTime) {
+        Map<String, List<String>> conflicts = new HashMap<>();
+        if (pref1Id != null) conflicts.put(pref1Id.toString(), getRoomConflicts(pref1Id, startTime, endTime));
+        if (pref2Id != null) conflicts.put(pref2Id.toString(), getRoomConflicts(pref2Id, startTime, endTime));
+        if (pref3Id != null) conflicts.put(pref3Id.toString(), getRoomConflicts(pref3Id, startTime, endTime));
+        return conflicts;
+    }
+
+    public List<String> getRoomConflicts(Long roomId, LocalDateTime start, LocalDateTime end) {
+        List<String> messages = new ArrayList<>();
+        Room room = roomRepository.findById(roomId).orElse(null);
+        if (room == null) return messages;
+
+        // Check against existing bookings for the whole period
+        List<RoomBookingRequest> conflictingBookings = bookingRepository.findConflictingBookings(roomId, start, end);
+        for (RoomBookingRequest b : conflictingBookings) {
+            String title = b.getEvent() != null ? b.getEvent().getTitle() : b.getMeetingPurpose();
+            messages.add("Booking conflict: " + title);
+        }
+
+        // Check against timetable for each day spanned by the event
+        LocalDate currentDate = start.toLocalDate();
+        LocalDate endDate = end.toLocalDate();
+        LocalTime timeStart = start.toLocalTime();
+        LocalTime timeEnd = end.toLocalTime();
+
+        while (!currentDate.isAfter(endDate)) {
+            DayOfWeek day = currentDate.getDayOfWeek();
+            
+            LocalTime checkStart = (currentDate.isEqual(start.toLocalDate())) ? timeStart : LocalTime.MIN;
+            LocalTime checkEnd = (currentDate.isEqual(endDate)) ? timeEnd : LocalTime.MAX;
+
+            List<FixedTimetable> timetableConflicts = fixedTimetableRepository.findByRoomIdOrderByDayOfWeekAscStartTimeAsc(roomId).stream()
+                .filter(ft -> ft.isActive() && ft.getDayOfWeek() == day &&
+                        ft.getStartTime().isBefore(checkEnd) && ft.getEndTime().isAfter(checkStart))
+                .collect(Collectors.toList());
+
+            for (FixedTimetable ft : timetableConflicts) {
+                messages.add("Timetable conflict on " + day + " (" + currentDate + "): " + ft.getCourseCode() + " from " + ft.getStartTime() + " to " + ft.getEndTime());
+            }
+
+            currentDate = currentDate.plusDays(1);
+        }
+
+        return messages;
     }
     
     public List<String> getAvailableSlots(Long roomId, LocalDate date) {

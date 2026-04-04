@@ -33,14 +33,36 @@ public class DataInitializer {
                 }
             });
 
-            if (users.findByUsername("admin").isEmpty()) {
-                User admin = new User();
-                admin.setUsername("admin");
-                admin.setPasswordHash(encoder.encode("Admin@123"));
-                admin.setEmail("admin@example.com");
-                admin.setRoles(Set.of(Role.ADMIN));
-                users.save(admin);
-                log.info("Seeded admin user");
+            if (users.findByUsername("central_admin").isEmpty()) {
+                User centralAdmin = new User();
+                centralAdmin.setUsername("central_admin");
+                centralAdmin.setPasswordHash(encoder.encode("Central@123"));
+                centralAdmin.setEmail("central@example.com");
+                centralAdmin.setRoles(Set.of(Role.CENTRAL_ADMIN));
+                users.save(centralAdmin);
+                log.info("Seeded central admin user");
+            }
+
+            if (users.findByUsername("ab1_admin").isEmpty()) {
+                User ab1Admin = new User();
+                ab1Admin.setUsername("ab1_admin");
+                ab1Admin.setPasswordHash(encoder.encode("Admin@AB1"));
+                ab1Admin.setEmail("ab1@example.com");
+                ab1Admin.setRoles(Set.of(Role.BUILDING_ADMIN));
+                ab1Admin.setManagedBuildingId(1L);
+                users.save(ab1Admin);
+                log.info("Seeded AB1 admin user");
+            }
+
+            if (users.findByUsername("ab2_admin").isEmpty()) {
+                User ab2Admin = new User();
+                ab2Admin.setUsername("ab2_admin");
+                ab2Admin.setPasswordHash(encoder.encode("Admin@AB2"));
+                ab2Admin.setEmail("ab2@example.com");
+                ab2Admin.setRoles(Set.of(Role.BUILDING_ADMIN));
+                ab2Admin.setManagedBuildingId(2L);
+                users.save(ab2Admin);
+                log.info("Seeded AB2 admin user");
             }
 
             if (users.findByUsername("faculty").isEmpty()) {
