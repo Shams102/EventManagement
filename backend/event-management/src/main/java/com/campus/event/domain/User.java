@@ -44,6 +44,10 @@ public class User {
 
     private String clubId;
 
+    private String fullName;
+
+    private Long managedBuildingId;
+
     @ElementCollection(fetch = FetchType.EAGER)
     @CollectionTable(name = "user_roles", joinColumns = @JoinColumn(name = "user_id"))
     @Enumerated(EnumType.STRING)
@@ -68,6 +72,10 @@ public class User {
         public void setRequestedRole(Role requestedRole) { this.requestedRole = requestedRole; }
         public String getClubId() { return clubId; }
         public void setClubId(String clubId) { this.clubId = clubId; }
+        public String getFullName() { return fullName; }
+        public void setFullName(String fullName) { this.fullName = fullName; }
+        public Long getManagedBuildingId() { return managedBuildingId; }
+        public void setManagedBuildingId(Long managedBuildingId) { this.managedBuildingId = managedBuildingId; }
 }
 
 

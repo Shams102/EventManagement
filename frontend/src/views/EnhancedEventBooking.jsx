@@ -86,7 +86,6 @@ const EnhancedEventBooking = () => {
   const fetchBuildings = async () => {
     try {
       const response = await api.get('/api/room-management/buildings')
-      console.log('Buildings response:', response.data)
       setBuildings(response.data)
     } catch (error) {
       console.error('Failed to fetch buildings:', error)
@@ -99,14 +98,13 @@ const EnhancedEventBooking = () => {
       await api.post('/api/room-management/initialize')
       await fetchBuildings()
     } catch (error) {
-      console.log('Default data might already exist')
+      // Default data might already exist
     }
   }
 
   const fetchFloors = async (buildingId) => {
     try {
       const response = await api.get(`/api/room-management/buildings/${buildingId}/floors`)
-      console.log('Floors response:', response.data)
       setFloors(response.data)
       setSelectedFloor('')
       setRooms([])
@@ -121,7 +119,6 @@ const EnhancedEventBooking = () => {
   const fetchRooms = async (floorId) => {
     try {
       const response = await api.get(`/api/room-management/floors/${floorId}/rooms`)
-      console.log('Rooms response:', response.data)
       setRooms(response.data)
       setSelectedRoom('')
       setSelectedSlots([])
@@ -137,7 +134,6 @@ const EnhancedEventBooking = () => {
       const response = await api.get(
         `/api/room-management/rooms/${selectedRoom}/availability?date=${selectedDate}`
       )
-      console.log('Availability response:', response.data)
       setAvailableSlots(response.data.availableSlots || [])
       setSelectedSlots([])
     } catch (error) {
@@ -153,7 +149,6 @@ const EnhancedEventBooking = () => {
       const response = await api.get(
         `/api/room-management/rooms/${selectedRoom}/schedule?date=${selectedDate}`
       )
-      console.log('Schedule response:', response.data)
       setRoomSchedule(response.data || [])
     } catch (error) {
       console.error('Failed to fetch schedule:', error)

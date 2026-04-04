@@ -1,5 +1,6 @@
 package com.campus.event.web;
 
+import com.campus.event.domain.PasswordResetToken;
 import com.campus.event.domain.Role;
 import com.campus.event.domain.User;
 import com.campus.event.repository.UserRepository;
@@ -9,14 +10,16 @@ import jakarta.validation.Valid;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.ResponseEntity;
-import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.*;
 
- 
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.UUID;
+import java.time.LocalDateTime;
 
 @RestController
 @RequestMapping("/api/auth")
-@CrossOrigin(origins = "http://localhost:5173", allowCredentials = "true")
 public class AuthController {
 
     private static final Logger log = LoggerFactory.getLogger(AuthController.class);
@@ -25,69 +28,53 @@ public class AuthController {
     private final JwtTokenService jwtTokenService;
     private final com.campus.event.service.CustomUserDetailsService userDetailsService;
     private final org.springframework.security.crypto.password.PasswordEncoder passwordEncoder;
+    private final com.campus.event.repository.PasswordResetTokenRepository tokenRepository;
 
-    public AuthController(UserRepository userRepository, JwtTokenService jwtTokenService, com.campus.event.service.CustomUserDetailsService userDetailsService, org.springframework.security.crypto.password.PasswordEncoder passwordEncoder) {
+    public AuthController(UserRepository userRepository, JwtTokenService jwtTokenService, com.campus.event.service.CustomUserDetailsService userDetailsService, org.springframework.security.crypto.password.PasswordEncoder passwordEncoder, com.campus.event.repository.PasswordResetTokenRepository tokenRepository) {
         this.userRepository = userRepository;
         this.jwtTokenService = jwtTokenService;
         this.userDetailsService = userDetailsService;
         this.passwordEncoder = passwordEncoder;
+        this.tokenRepository = tokenRepository;
     }
 
-    @PostMapping(value = "/login", consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
-    public ResponseEntity<?> login(@Valid @RequestBody LoginRequest request) {
-        try {
-            String uname = request.getUsername();
-            return userRepository.findByUsername(uname)
-                    .map(user -> {
-                        boolean ok = passwordEncoder.matches(request.getPassword(), user.getPasswordHash());
-                        log.debug("Login attempt user='{}' match={}", user.getUsername(), ok);
-                        if (ok) {
-                            org.springframework.security.core.userdetails.User userDetails =
-                                    (org.springframework.security.core.userdetails.User) userDetailsService.loadUserByUsername(user.getUsername());
-                            java.util.List<String> roles = userDetails.getAuthorities().stream()
-                                    .map(org.springframework.security.core.GrantedAuthority::getAuthority)
-                                    .toList();
-                            java.util.Map<String, Object> claims = new java.util.HashMap<>();
-                            claims.put("roles", roles);
-                            if (user.getClubId() != null) {
-                                claims.put("clubId", user.getClubId());
-                            }
-                            String token = jwtTokenService.generateToken(claims, userDetails);
-                            String body = "{\"token\":\"" + token + "\"}";
-                            return ResponseEntity.ok()
-                                    .contentType(MediaType.APPLICATION_JSON)
-                                    .body(body);
-                        } else {
-                            String body = "{\"error\":\"Invalid password\"}";
-                            return ResponseEntity.status(401)
-                                    .contentType(MediaType.APPLICATION_JSON)
-                                    .body(body);
+    @PostMapping("/login")
+    public ResponseEntity<Map<String, Object>> login(@Valid @RequestBody LoginRequest request) {
+        String uname = request.getUsername();
+        return userRepository.findByUsername(uname)
+                .map(user -> {
+                    boolean ok = passwordEncoder.matches(request.getPassword(), user.getPasswordHash());
+                    log.debug("Login attempt user='{}' match={}", user.getUsername(), ok);
+                    if (ok) {
+                        org.springframework.security.core.userdetails.User userDetails =
+                                (org.springframework.security.core.userdetails.User) userDetailsService.loadUserByUsername(user.getUsername());
+                        List<String> roles = userDetails.getAuthorities().stream()
+                                .map(org.springframework.security.core.GrantedAuthority::getAuthority)
+                                .toList();
+                        Map<String, Object> claims = new HashMap<>();
+                        claims.put("roles", roles);
+                        if (user.getClubId() != null) {
+                            claims.put("clubId", user.getClubId());
                         }
-                    })
-                    .orElseGet(() -> {
-                        log.debug("Login attempt user='{}' not found", uname);
-                        String body = "{\"error\":\"User not found\"}";
-                        return ResponseEntity.status(404)
-                                .contentType(MediaType.APPLICATION_JSON)
-                                .body(body);
-                    });
-        } catch (Exception e) {
-            log.error("Unexpected error during login for username={}", request != null ? request.getUsername() : "<null>", e);
-            String body = "{\"error\":\"Internal Server Error\"}";
-            return ResponseEntity.status(500)
-                    .contentType(MediaType.APPLICATION_JSON)
-                    .body(body);
-        }
-
+                        String token = jwtTokenService.generateToken(claims, userDetails);
+                        return ResponseEntity.ok(Map.<String, Object>of("token", token));
+                    } else {
+                        return ResponseEntity.status(401).body(Map.<String, Object>of("error", "Invalid password"));
+                    }
+                })
+                .orElseGet(() -> {
+                    log.debug("Login attempt user='{}' not found", uname);
+                    return ResponseEntity.status(404).body(Map.<String, Object>of("error", "User not found"));
+                });
     }
 
     @PostMapping("/register")
-    public ResponseEntity<?> register(@Valid @RequestBody com.campus.event.web.dto.RegisterRequest request) {
+    public ResponseEntity<Map<String, Object>> register(@Valid @RequestBody com.campus.event.web.dto.RegisterRequest request) {
         if (userRepository.findByUsername(request.getUsername()).isPresent()) {
-            return ResponseEntity.badRequest().body("Username already exists");
+            return ResponseEntity.badRequest().body(Map.of("error", "Username already exists"));
         }
         if (userRepository.existsByEmail(request.getEmail())) {
-            return ResponseEntity.badRequest().body("Email already registered");
+            return ResponseEntity.badRequest().body(Map.of("error", "Email already registered"));
         }
         User user = new User();
         user.setUsername(request.getUsername());
@@ -107,11 +94,61 @@ public class AuthController {
         }
         userRepository.save(user);
         if (user.getRequestedRole() != null) {
-            return ResponseEntity.ok("Registered. Awaiting admin approval for role: " + user.getRequestedRole());
+            return ResponseEntity.ok(Map.of("message", "Registered. Awaiting admin approval for role: " + user.getRequestedRole()));
         }
-        return ResponseEntity.ok("Registered");
+        return ResponseEntity.ok(Map.of("message", "Registered"));
+    }
+
+    @PostMapping("/forgot-password")
+    public ResponseEntity<?> forgotPassword(@RequestBody Map<String, String> request) {
+        String email = request.get("email");
+        if (email == null) {
+            return ResponseEntity.badRequest().body(Map.of("error", "Email is required"));
+        }
+        
+        userRepository.findByEmail(email).ifPresent(user -> {
+            String token = UUID.randomUUID().toString();
+            PasswordResetToken resetToken = new PasswordResetToken(token, user, LocalDateTime.now().plusMinutes(30));
+            tokenRepository.save(resetToken);
+            
+            // In a real app, send email with Spring Mail.
+            // For now, log the token to console.
+            log.info("Password reset requested for {}. Token: {}", email, token);
+            System.out.println("=================================================");
+            System.out.println("PASSWORD RESET LINK: http://localhost:5173/reset-password?token=" + token);
+            System.out.println("=================================================");
+        });
+        
+        // Always return success to prevent email enumeration
+        return ResponseEntity.ok(Map.of("message", "If your email is registered, you will receive a reset link shortly."));
+    }
+
+    @PostMapping("/reset-password")
+    public ResponseEntity<?> resetPassword(@RequestBody Map<String, String> request) {
+        String token = request.get("token");
+        String newPassword = request.get("newPassword");
+        
+        if (token == null || newPassword == null) {
+            return ResponseEntity.badRequest().body(Map.of("error", "Token and new password are required"));
+        }
+        
+        var resetTokenOpt = tokenRepository.findByToken(token);
+        if (resetTokenOpt.isEmpty()) {
+            return ResponseEntity.badRequest().body(Map.of("error", "Invalid token"));
+        }
+        
+        PasswordResetToken resetToken = resetTokenOpt.get();
+        if (resetToken.isUsed() || resetToken.getExpiryDate().isBefore(LocalDateTime.now())) {
+            return ResponseEntity.badRequest().body(Map.of("error", "Token has expired or already been used"));
+        }
+        
+        User user = resetToken.getUser();
+        user.setPasswordHash(passwordEncoder.encode(newPassword));
+        userRepository.save(user);
+        
+        resetToken.setUsed(true);
+        tokenRepository.save(resetToken);
+        
+        return ResponseEntity.ok(Map.of("message", "Password successfully reset"));
     }
 }
-
-
-

@@ -20,9 +20,9 @@ export default function NotificationBell({ onOpen, open = false }) {
       aria-haspopup="dialog"
       aria-expanded={open}
       onClick={onOpen}
-      className={`relative p-2 rounded-full hover:bg-gray-100 focus-ring ${count > 0 ? 'animate-bell' : ''}`}
+      className={`relative p-2 rounded-full hover:bg-white/5 transition-all duration-200 ease ${count > 0 ? 'animate-bell' : ''}`}
     >
-      <svg className="w-6 h-6 text-slate-700" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+      <svg className="w-6 h-6 text-[#E5E7EB]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6 6 0 10-12 0v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0a3 3 0 11-6 0h6z" />
       </svg>
       {count > 0 && (

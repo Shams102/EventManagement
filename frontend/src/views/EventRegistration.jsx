@@ -12,18 +12,13 @@ export default function EventRegistration() {
   const [email, setEmail] = useState('')
   const [fullName, setFullName] = useState('')
   const [answers, setAnswers] = useState({})
-  const [message, setMessage] = useState('')
   const [loading, setLoading] = useState(false)
   const [event, setEvent] = useState(null)
   const [closed, setClosed] = useState(false)
   const [isRegistered, setIsRegistered] = useState(false)
+  const [justRegistered, setJustRegistered] = useState(false)
   const { user, hasRole } = useAuth()
   const emailValid = email ? /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[A-Za-z]{2,}$/.test(email.trim()) : true
-
-  const isErrorMessage = (m) => {
-    if (!m) return false
-    return /(failed|error|closed|please enter|invalid)/i.test(String(m))
-  }
 
   useEffect(() => {
     api.get(`/api/public/events/${eventId}`)
@@ -66,11 +61,15 @@ export default function EventRegistration() {
 
   const onSubmit = async (e) => {
     e.preventDefault()
-    setMessage('')
 
     const emailPattern = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[A-Za-z]{2,}$/
     if (!emailPattern.test(email.trim())) {
-      setMessage('Please enter a valid email address.')
+      showToast({ message: 'Please enter a valid email address.', type: 'error', timeout: 3500 })
+      return
+    }
+
+    if (isRegistered || justRegistered) {
+      showToast({ message: 'You are already registered for this event.', type: 'error', timeout: 3500 })
       return
     }
 
@@ -79,16 +78,23 @@ export default function EventRegistration() {
     try {
       const res = await api.post(`/api/events/${eventId}/register`, { fullName: fullName.trim() })
       const already = res?.data?.status === 'already_registered'
-      setMessage(already ? 'You are already registered for this event.' : 'Registration successful!')
-      showToast({ message: 'Registration successful', type: 'success' })
+      if (already) {
+        setJustRegistered(false)
+        setIsRegistered(true)
+        showToast({ message: 'You are already registered for this event.', type: 'error', timeout: 3500 })
+        return
+      }
+
+      setJustRegistered(true)
       setIsRegistered(true)
+      showToast({ message: 'Registration successful', type: 'success', timeout: 3500 })
       setTimeout(() => {
         navigate('/events')
       }, 2000)
     } catch (err) {
       const m = 'Registration failed: ' + (err.response?.data || err.message)
-      setMessage(m)
-      showToast({ message: m, type: 'error' })
+      setJustRegistered(false)
+      showToast({ message: m, type: 'error', timeout: 4000 })
     } finally {
       setLoading(false)
     }
@@ -185,7 +191,7 @@ export default function EventRegistration() {
             </div>
           )}
 
-          {isRegistered && (
+          {isRegistered && !justRegistered && (
             <div className="alert alert-success mb-4">
               You are already registered for this event.
             </div>
@@ -228,16 +234,10 @@ export default function EventRegistration() {
               </div>
             ))}
 
-            {message && (
-              <div className={`alert ${isErrorMessage(message) ? 'alert-error' : 'alert-success'}`} role={isErrorMessage(message) ? 'alert' : 'status'} aria-live={isErrorMessage(message) ? 'assertive' : 'polite'}>
-                {message}
-              </div>
-            )}
-
             <button
               type="submit"
               className="btn btn-primary w-full"
-              disabled={loading || closed || isCreator || !canRegisterRole || isRegistered}
+              disabled={loading || closed || isCreator || !canRegisterRole || isRegistered || justRegistered}
             >
               {loading ? (
                 <div className="flex items-center justify-center">
@@ -245,7 +245,7 @@ export default function EventRegistration() {
                   Registering...
                 </div>
               ) : (
-                isRegistered ? 'Already registered' : 'Register for Event'
+                (justRegistered || isRegistered) ? 'Registered ✓' : 'Register for Event'
               )}
             </button>
           </form>

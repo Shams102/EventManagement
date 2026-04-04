@@ -16,7 +16,6 @@ import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/room-management")
-@CrossOrigin(origins = "http://localhost:5173", allowCredentials = "true")
 public class RoomManagementController {
     
     private final RoomManagementService roomManagementService;
@@ -147,8 +146,8 @@ public class RoomManagementController {
     @PreAuthorize("hasAnyRole('ADMIN')")
     public ResponseEntity<?> initializeDefaultData() {
         try {
-            roomManagementService.initializeDefaultBuilding();
-            return ResponseEntity.ok(Map.of("message", "Default building structure initialized successfully"));
+            roomManagementService.initializeBuildings();
+            return ResponseEntity.ok(Map.of("message", "Building structures initialized successfully"));
         } catch (Exception e) {
             return ResponseEntity.badRequest().body("Failed to initialize: " + e.getMessage());
         }

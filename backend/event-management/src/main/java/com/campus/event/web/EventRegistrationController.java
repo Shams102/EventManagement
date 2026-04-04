@@ -33,7 +33,6 @@ import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api")
-@CrossOrigin(origins = "http://localhost:5173", allowCredentials = "true")
 public class EventRegistrationController {
 
     private final EventRepository eventRepository;
@@ -103,6 +102,14 @@ public class EventRegistrationController {
             }
             if (LocalDateTime.now().isAfter(event.getStartTime().minusDays(2))) {
                 return ResponseEntity.status(403).body("Registration closed 2 days before event start");
+            }
+        }
+
+        // capacity check
+        if (event.getMaxAttendees() != null && event.getMaxAttendees() > 0) {
+            long currentCount = registrationRepository.findByEvent_Id(eventId).size();
+            if (currentCount >= event.getMaxAttendees()) {
+                return ResponseEntity.status(403).body("Event is full");
             }
         }
 

@@ -5,5 +5,6 @@ public enum RoomType {
     LAB,
     MEETING_ROOM,
     SEMINAR_HALL,
-    CLASSROOM
+    CLASSROOM,
+    AUDITORIUM
 }

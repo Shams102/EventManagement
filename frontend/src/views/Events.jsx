@@ -122,7 +122,7 @@ export default function Events() {
           <h1 className="text-3xl font-bold text-gray-900">EventSphere</h1>
           <p className="text-gray-600">Discover and register for upcoming events</p>
         </div>
-        {(hasRole('ADMIN') || hasRole('FACULTY') || hasRole('CLUB_ASSOCIATE')) && (
+        {(hasRole('ADMIN') || hasRole('FACULTY') || hasRole('CLUB_ASSOCIATE') || hasRole('CENTRAL_ADMIN') || hasRole('BUILDING_ADMIN')) && (
           <div className="flex gap-2">
             <Link to="/events/create" className="btn btn-primary">Create Event</Link>
           </div>
@@ -225,7 +225,11 @@ export default function Events() {
                 <div className="space-y-2 mb-4">
                   <div className="flex items-center text-sm text-gray-500">
                     <span className="mr-2">📅</span>
-                    <span>{new Date(event.startTime).toLocaleDateString()}</span>
+                    <span>
+                      {new Date(event.startTime).toLocaleDateString() === new Date(event.endTime).toLocaleDateString() 
+                        ? new Date(event.startTime).toLocaleDateString() 
+                        : `${new Date(event.startTime).toLocaleDateString()} - ${new Date(event.endTime).toLocaleDateString()}`}
+                    </span>
                   </div>
                   <div className="flex items-center text-sm text-gray-500">
                     <span className="mr-2">🕐</span>
@@ -237,6 +241,14 @@ export default function Events() {
                   <div className="flex items-center text-sm text-gray-500">
                     <span className="mr-2">📍</span>
                     <span>Location: {event.location || 'TBD'}</span>
+                  </div>
+                  <div className="flex items-center text-sm text-gray-500">
+                    <span className="mr-2">👥</span>
+                    <span>
+                      {event.maxAttendees
+                        ? `Capacity: ${event.currentRegistrations ?? 0} / ${event.maxAttendees}`
+                        : 'Unlimited capacity'}
+                    </span>
                   </div>
                 </div>
                 

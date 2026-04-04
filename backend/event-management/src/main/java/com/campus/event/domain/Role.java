@@ -4,7 +4,7 @@ public enum Role {
     GENERAL_USER,
     FACULTY,
     CLUB_ASSOCIATE,
-    ADMIN
+    ADMIN,
+    BUILDING_ADMIN,
+    CENTRAL_ADMIN
 }
-
-

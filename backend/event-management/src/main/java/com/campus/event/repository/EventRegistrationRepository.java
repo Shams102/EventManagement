@@ -15,4 +15,6 @@ public interface EventRegistrationRepository extends JpaRepository<EventRegistra
     List<EventRegistration> findByUserUsernameWithEvent(String username);
     @Query("select r.user.username from EventRegistration r where r.event.id = ?1")
     List<String> findUsernamesByEventId(Long eventId);
+    void deleteByEvent_Id(Long eventId);
+    long countByEvent_Id(Long eventId);
 }
