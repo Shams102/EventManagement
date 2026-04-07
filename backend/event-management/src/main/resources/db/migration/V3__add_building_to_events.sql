@@ -31,15 +31,7 @@ BEGIN
     --     legacy schemas and use NOT EXISTS instead, which is safe if empty.)
     -- -------------------------------------------------------------------------
     SELECT COUNT(*) INTO building_count FROM public.buildings;
-    IF building_count = 0 THEN
-        INSERT INTO public.buildings (name, code, description, is_active)
-        VALUES (
-            'Unassigned',
-            'UNASSIGNED',
-            'Default building for events created before mandatory building assignment',
-            true
-        );
-    END IF;
+    SELECT COUNT(*) INTO building_count FROM public.buildings;
 
     -- -------------------------------------------------------------------------
     -- 2) Nullable column first (idempotent)

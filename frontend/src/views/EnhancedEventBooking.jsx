@@ -57,7 +57,6 @@ const EnhancedEventBooking = () => {
   useEffect(() => {
     if (needsRoom) {
       fetchBuildings()
-      initializeDefaultData()
     }
   }, [needsRoom])
 
@@ -86,19 +85,10 @@ const EnhancedEventBooking = () => {
   const fetchBuildings = async () => {
     try {
       const response = await api.get('/api/room-management/buildings')
-      setBuildings(response.data)
+      setBuildings((response.data || []).filter(b => b.id && b.name))
     } catch (error) {
       console.error('Failed to fetch buildings:', error)
       setError('Failed to load buildings. Please try again.')
-    }
-  }
-
-  const initializeDefaultData = async () => {
-    try {
-      await api.post('/api/room-management/initialize')
-      await fetchBuildings()
-    } catch (error) {
-      // Default data might already exist
     }
   }
 

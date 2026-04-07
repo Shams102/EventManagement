@@ -9,9 +9,11 @@ import org.springframework.stereotype.Repository;
 
 import java.time.LocalTime;
 import java.util.List;
+import java.util.Optional;
 
 @Repository
 public interface RoomRepository extends JpaRepository<Room, Long> {
+    Optional<Room> findByNameAndFloorId(String name, Long floorId);
     List<Room> findByFloorIdOrderByRoomNumberAsc(Long floorId);
     List<Room> findByFloorIdAndIsActiveTrueOrderByRoomNumberAsc(Long floorId);
     
@@ -35,6 +37,10 @@ public interface RoomRepository extends JpaRepository<Room, Long> {
                                     @Param("dayOfWeek") java.time.DayOfWeek dayOfWeek,
                                     @Param("startTime") LocalTime startTime, 
                                     @Param("endTime") LocalTime endTime);
+
+    @org.springframework.data.jpa.repository.Lock(jakarta.persistence.LockModeType.PESSIMISTIC_WRITE)
+    @Query("SELECT r FROM Room r WHERE r.id = :id")
+    java.util.Optional<Room> findByIdWithPessimisticLock(@Param("id") Long id);
 }
 
 

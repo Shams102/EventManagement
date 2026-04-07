@@ -62,7 +62,7 @@ export default function Events() {
   const canRegister = (evt) => {
     if (evt && registeredEventIds.has(Number(evt.id))) return false
     if (user && evt.createdBy && evt.createdBy === user.sub) return false
-    if (hasRole('ADMIN') || hasRole('FACULTY')) return false
+    if (hasRole('ADMIN') || hasRole('BUILDING_ADMIN') || hasRole('CENTRAL_ADMIN')) return false
     if (hasRole('CLUB_ASSOCIATE')) {
       if (clubId && evt.clubId && evt.clubId === clubId) return false
     }

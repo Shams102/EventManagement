@@ -3,6 +3,7 @@ package com.campus.event.repository;
 import com.campus.event.domain.RoomBookingRequest;
 import com.campus.event.domain.RoomBookingStatus;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
@@ -42,4 +43,11 @@ public interface RoomBookingRequestRepository extends JpaRepository<RoomBookingR
     List<RoomBookingRequest> findApprovedToConfirm(@Param("cutoff") LocalDateTime cutoff);
 
     List<RoomBookingRequest> findBySplitGroupId(UUID splitGroupId);
+    
+    @Modifying
+    @Query("UPDATE RoomBookingRequest r SET r.status = 'REJECTED' WHERE r.splitGroupId = :groupId AND r.id != :approvedId AND r.status = 'PENDING'")
+    void rejectSplitSiblingsBulk(@Param("groupId") UUID groupId, @Param("approvedId") Long approvedId);
+    
+    @Query("SELECT r FROM RoomBookingRequest r ORDER BY r.requestedAt DESC")
+    org.springframework.data.domain.Page<RoomBookingRequest> findRecentBookings(org.springframework.data.domain.Pageable pageable);
 }

@@ -1,10 +1,12 @@
 package com.campus.event.web;
 
 import com.campus.event.domain.Event;
+import com.campus.event.domain.EventTimeSlot;
 import com.campus.event.domain.Room;
 import com.campus.event.domain.RoomBookingRequest;
 import com.campus.event.domain.RoomBookingStatus;
 import com.campus.event.repository.EventRepository;
+import com.campus.event.repository.EventTimeSlotRepository;
 import com.campus.event.repository.RoomBookingRequestRepository;
 import com.campus.event.repository.RoomRepository;
 import jakarta.validation.Valid;
@@ -35,17 +37,23 @@ public class RoomBookingRequestController {
     private final com.campus.event.service.ScheduleService scheduleService;
     private final BuildingTimetableService buildingTimetableService;
     private final EventRoomBookingSplitService eventRoomBookingSplitService;
+    private final EventTimeSlotRepository eventTimeSlotRepository;
+    private final com.campus.event.service.RoomAvailabilityService availabilityService;
 
     public RoomBookingRequestController(RoomBookingRequestRepository requestRepo, EventRepository eventRepo, RoomRepository roomRepo,
                                         com.campus.event.service.ScheduleService scheduleService,
                                         BuildingTimetableService buildingTimetableService,
-                                        EventRoomBookingSplitService eventRoomBookingSplitService) {
+                                        EventRoomBookingSplitService eventRoomBookingSplitService,
+                                        EventTimeSlotRepository eventTimeSlotRepository,
+                                        com.campus.event.service.RoomAvailabilityService availabilityService) {
         this.requestRepo = requestRepo;
         this.eventRepo = eventRepo;
         this.roomRepo = roomRepo;
         this.scheduleService = scheduleService;
         this.buildingTimetableService = buildingTimetableService;
         this.eventRoomBookingSplitService = eventRoomBookingSplitService;
+        this.eventTimeSlotRepository = eventTimeSlotRepository;
+        this.availabilityService = availabilityService;
     }
 
     public static class CreateRequest {
@@ -78,7 +86,7 @@ public class RoomBookingRequestController {
     }
 
     @PostMapping
-    @PreAuthorize("hasAnyRole('ADMIN','CLUB_ASSOCIATE')")
+    @PreAuthorize("hasAnyRole('ADMIN','BUILDING_ADMIN','CENTRAL_ADMIN','CLUB_ASSOCIATE','FACULTY')")
     @Transactional
     public ResponseEntity<?> create(@Valid @RequestBody CreateRequest req, @AuthenticationPrincipal UserDetails principal) {
         if (req.pref1RoomId == null || req.pref2RoomId == null || req.pref3RoomId == null) {
@@ -138,7 +146,14 @@ public class RoomBookingRequestController {
 
         Map<String, List<String>> conflicts;
         if (eventMode && event != null) {
-            conflicts = scheduleService.validateEventRoomPreferences(req.pref1RoomId, req.pref2RoomId, req.pref3RoomId, event.getStartTime(), event.getEndTime());
+            // Use per-slot conflict detection for multi-day events
+            List<EventTimeSlot> slots = eventTimeSlotRepository.findByEvent_IdOrderBySlotStartAsc(event.getId());
+            if (slots.isEmpty()) {
+                // Fallback for legacy events with no slots recorded
+                conflicts = scheduleService.validateEventRoomPreferences(req.pref1RoomId, req.pref2RoomId, req.pref3RoomId, event.getStartTime(), event.getEndTime());
+            } else {
+                conflicts = scheduleService.validateEventRoomPreferencesMultiSlot(req.pref1RoomId, req.pref2RoomId, req.pref3RoomId, slots);
+            }
         } else {
             conflicts = scheduleService.validateEventRoomPreferences(req.pref1RoomId, req.pref2RoomId, req.pref3RoomId, req.meetingStart, req.meetingEnd);
         }
@@ -182,7 +197,7 @@ public class RoomBookingRequestController {
     }
 
     @PostMapping("/meeting")
-    @PreAuthorize("hasAnyRole('ADMIN','FACULTY','CLUB_ASSOCIATE')")
+    @PreAuthorize("hasAnyRole('ADMIN','BUILDING_ADMIN','CENTRAL_ADMIN','FACULTY','CLUB_ASSOCIATE')")
     @Transactional
     public ResponseEntity<?> createSimpleMeeting(@Valid @RequestBody SimpleBookingRequest req, @AuthenticationPrincipal UserDetails principal) {
         if (req.roomId == null || req.meetingStart == null || req.meetingEnd == null || req.purpose == null) {
@@ -201,12 +216,18 @@ public class RoomBookingRequestController {
             return ResponseEntity.badRequest().body("meetingStart must be in the future");
         }
 
-        Room room = roomRepo.findById(req.roomId).orElse(null);
+        // Secure race conditions via pessimistic row-locking on the Room
+        Room room = roomRepo.findByIdWithPessimisticLock(req.roomId).orElse(null);
         if (room == null) {
             return ResponseEntity.badRequest().body("Room not found");
         }
         if (!roomBelongsToBuilding(room, req.buildingId)) {
             return ResponseEntity.badRequest().body("Room does not belong to the selected building");
+        }
+
+        boolean available = availabilityService.isRoomAvailable(room.getId(), req.meetingStart, req.meetingEnd);
+        if (!available) {
+            return ResponseEntity.status(400).body("Room is not available in the requested window");
         }
 
         RoomBookingRequest bookingRequest = new RoomBookingRequest();
@@ -216,15 +237,18 @@ public class RoomBookingRequestController {
         bookingRequest.setPref1(room);
         bookingRequest.setPref2(room);
         bookingRequest.setPref3(room);
-        bookingRequest.setStatus(RoomBookingStatus.PENDING);
+        bookingRequest.setAllocatedRoom(room);
+        bookingRequest.setStatus(RoomBookingStatus.APPROVED);
+        bookingRequest.setApprovedAt(java.time.LocalDateTime.now());
+        bookingRequest.setApprovedByUsername(principal.getUsername());
         bookingRequest.setRequestedByUsername(principal.getUsername());
         
         RoomBookingRequest saved = requestRepo.save(bookingRequest);
-        return ResponseEntity.ok(Map.of("id", saved.getId(), "status", saved.getStatus().name()));
+        return ResponseEntity.ok(Map.of("id", saved.getId(), "status", saved.getStatus().name(), "allocatedRoom", room.getName()));
     }
 
     @GetMapping("/mine")
-    @PreAuthorize("hasAnyRole('ADMIN','FACULTY','CLUB_ASSOCIATE')")
+    @PreAuthorize("hasAnyRole('ADMIN','BUILDING_ADMIN','CENTRAL_ADMIN','FACULTY','CLUB_ASSOCIATE')")
     @Transactional(readOnly = true)
     public List<Map<String, Object>> mine(@AuthenticationPrincipal UserDetails principal) {
         return requestRepo.findByRequestedByUsernameOrderByRequestedAtDesc(principal.getUsername())
@@ -257,7 +281,7 @@ public class RoomBookingRequestController {
     }
 
     @PostMapping("/{id}/cancel")
-    @PreAuthorize("hasAnyRole('ADMIN','FACULTY','CLUB_ASSOCIATE')")
+    @PreAuthorize("hasAnyRole('ADMIN','BUILDING_ADMIN','CENTRAL_ADMIN','FACULTY','CLUB_ASSOCIATE')")
     @Transactional
     public ResponseEntity<?> cancel(@PathVariable Long id, @AuthenticationPrincipal UserDetails principal) {
         RoomBookingRequest req = requestRepo.findById(id).orElse(null);

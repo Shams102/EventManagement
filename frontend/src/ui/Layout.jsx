@@ -21,11 +21,9 @@ export default function Layout({ children }) {
       { to: '/', label: 'Home', show: true },
       { to: '/dashboard', label: 'Dashboard', show: !!user },
       { to: '/events', label: 'Events', show: true },
-      { to: '/bookings', label: 'Bookings', show: !!user && (hasRole('FACULTY') || hasRole('CLUB_ASSOCIATE') || hasRole('ADMIN')) },
-      { to: '/enhanced-book-room', label: 'Book Room', show: !!user && (hasRole('FACULTY') || hasRole('CLUB_ASSOCIATE') || hasRole('ADMIN') || hasRole('CENTRAL_ADMIN') || hasRole('BUILDING_ADMIN')) },
+      { to: '/book-room', label: 'Book Room', show: !!user && (hasRole('ADMIN') || hasRole('BUILDING_ADMIN') || hasRole('CENTRAL_ADMIN') || hasRole('FACULTY') || hasRole('CLUB_ASSOCIATE')) },
       { to: '/admin/role-requests', label: 'Admin', show: !!user && (hasRole('ADMIN') || hasRole('CENTRAL_ADMIN')) },
-      { to: '/admin/room-approvals', label: 'Room Approvals', show: !!user && (hasRole('ADMIN') || hasRole('BUILDING_ADMIN')) },
-      { to: '/profile', label: 'Profile', show: !!user },
+      { to: '/admin/room-approvals', label: 'Room Approvals', show: !!user && (hasRole('ADMIN') || hasRole('BUILDING_ADMIN') || hasRole('CENTRAL_ADMIN')) },
     ]
     return items.filter(i => i.show)
   }, [user, hasRole])

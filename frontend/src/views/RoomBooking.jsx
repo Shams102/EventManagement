@@ -5,7 +5,6 @@ import { useAuth } from '../lib/AuthContext'
 
 export default function RoomBooking() {
   const { hasRole } = useAuth()
-  const isFaculty = hasRole('FACULTY')
   
   // Original state
   const [rooms, setRooms] = useState([])
@@ -66,7 +65,7 @@ export default function RoomBooking() {
       ])
 
       if (roomsRes.status === 'fulfilled') {
-        setRooms(roomsRes.value.data || [])
+        setRooms((roomsRes.value.data || []).filter(r => r.buildingId != null))
       } else {
         setRooms([])
         const data = roomsRes.reason?.response?.data
@@ -84,7 +83,7 @@ export default function RoomBooking() {
       }
 
       if (buildingsRes.status === 'fulfilled') {
-        setBuildings(buildingsRes.value.data || [])
+        setBuildings((buildingsRes.value.data || []).filter(b => b.id && b.name))
       }
     } finally {
       setRoomsLoading(false)
@@ -306,90 +305,58 @@ export default function RoomBooking() {
       }
       setBuildingError('')
 
-      if (isFaculty) {
+      if (mode === 'event') {
+        if (!pref1 || !pref2 || !pref3) {
+          setMessage('Please select three room preferences')
+          return
+        }
+        if (new Set([pref1, pref2, pref3]).size < 3) {
+          setMessage('Please select three different rooms')
+          return
+        }
+        if (!eventId) { setMessage('Please select an event'); return }
+
+        const payload = {
+          buildingId: Number(selectedBuildingId),
+          pref1RoomId: Number(pref1),
+          pref2RoomId: Number(pref2),
+          pref3RoomId: Number(pref3),
+          eventId: Number(eventId)
+        }
+        const res = await api.post('/api/room-requests', payload)
+        if (res.status === 200) {
+          setMessage('Request Sent for Approval')
+          showToast({ message: 'Request Sent for Approval', type: 'success' })
+          setEventId(''); setPref1(''); setPref2(''); setPref3('')
+          setMeetingStart(''); setMeetingEnd(''); setMeetingPurpose('')
+          setRoomConflicts([])
+        } else {
+          setMessage('Event Request failed')
+        }
+      } else {
         if (!pref1) {
           setMessage('Please select a room')
           showToast({ message: 'Please select a room', type: 'error' })
           return
         }
-        let payload
-        const buildingId = Number(selectedBuildingId)
-        if (mode === 'event') {
-          if (!eventId) { setMessage('Please select an event'); return }
-          payload = { eventId: Number(eventId), roomId: Number(pref1), buildingId }
-        } else {
-          if (!meetingStart || !meetingEnd || !meetingPurpose) { setMessage('Please provide meeting start, end, and purpose'); return }
-          payload = {
-            roomId: Number(pref1),
-            buildingId,
-            start: toLocalDateTimeSeconds(meetingStart),
-            end: toLocalDateTimeSeconds(meetingEnd),
-            purpose: meetingPurpose
-          }
+        if (!meetingStart || !meetingEnd || !meetingPurpose) { setMessage('Please provide meeting start, end, and purpose'); return }
+
+        const payload = {
+          roomId: Number(pref1),
+          buildingId: Number(selectedBuildingId),
+          purpose: meetingPurpose,
+          meetingStart: toLocalDateTimeSeconds(meetingStart),
+          meetingEnd: toLocalDateTimeSeconds(meetingEnd)
         }
-        const res = await api.post('/api/faculty/bookings', payload)
+        const res = await api.post('/api/room-requests/meeting', payload)
         if (res.status === 200) {
-          setMessage('Booked and approved immediately for the selected room.')
-          showToast({ message: 'Room booked — approved', type: 'success' })
+          setMessage('Booking Confirmed')
+          showToast({ message: 'Booking Confirmed', type: 'success' })
           setEventId(''); setPref1(''); setPref2(''); setPref3('')
           setMeetingStart(''); setMeetingEnd(''); setMeetingPurpose('')
           setRoomConflicts([])
         } else {
-          setMessage('Booking failed')
-          showToast({ message: 'Booking failed', type: 'error' })
-        }
-      } else {
-        if (mode === 'event') {
-          if (!pref1 || !pref2 || !pref3) {
-            setMessage('Please select three room preferences')
-            return
-          }
-          if (new Set([pref1, pref2, pref3]).size < 3) {
-            setMessage('Please select three different rooms')
-            return
-          }
-          if (!eventId) { setMessage('Please select an event'); return }
-
-          const payload = {
-            buildingId: Number(selectedBuildingId),
-            pref1RoomId: Number(pref1),
-            pref2RoomId: Number(pref2),
-            pref3RoomId: Number(pref3),
-            eventId: Number(eventId)
-          }
-          const res = await api.post('/api/room-requests', payload)
-          if (res.status === 200) {
-            setMessage('Request submitted. Admin approval pending. Official confirmation 2 days before the event/meeting.')
-            setEventId(''); setPref1(''); setPref2(''); setPref3('')
-            setMeetingStart(''); setMeetingEnd(''); setMeetingPurpose('')
-            setRoomConflicts([])
-          } else {
-            setMessage('Request failed')
-          }
-        } else {
-          if (!pref1) {
-            setMessage('Please select a room')
-            showToast({ message: 'Please select a room', type: 'error' })
-            return
-          }
-          if (!meetingStart || !meetingEnd || !meetingPurpose) { setMessage('Please provide meeting start, end, and purpose'); return }
-
-          const payload = {
-            roomId: Number(pref1),
-            buildingId: Number(selectedBuildingId),
-            purpose: meetingPurpose,
-            meetingStart: toLocalDateTimeSeconds(meetingStart),
-            meetingEnd: toLocalDateTimeSeconds(meetingEnd)
-          }
-          const res = await api.post('/api/room-requests/meeting', payload)
-          if (res.status === 200) {
-            setMessage('Request submitted. Admin approval pending. Official confirmation 2 days before the event/meeting.')
-            setEventId(''); setPref1(''); setPref2(''); setPref3('')
-            setMeetingStart(''); setMeetingEnd(''); setMeetingPurpose('')
-            setRoomConflicts([])
-          } else {
-            setMessage('Request failed')
-          }
+          setMessage('Meeting Request failed')
         }
       }
     } catch (err) {
@@ -423,7 +390,7 @@ export default function RoomBooking() {
           <p className="text-sm text-[#9CA3AF]">Reserve conference rooms, lecture halls, and meeting spaces</p>
         </div>
         <div className="text-xs text-[#9CA3AF]">
-          {isFaculty ? 'Faculty: instant approval' : 'Club: admin approval'}
+          {mode === 'event' ? 'Event Booking (Requires Approval)' : 'Meeting Booking (Instant Booking)'}
         </div>
       </div>
 
@@ -518,16 +485,7 @@ export default function RoomBooking() {
                     Choose a campus building before selecting rooms.
                   </p>
                 )}
-                {buildings.length === 0 && !roomsLoading && !roomsError && (
-                  <p className="text-xs text-amber-400 mt-1">No buildings loaded. Use Reload data above or check the backend.</p>
-                )}
               </div>
-
-              {mode === 'event' && (!eventId || !Number(pref1)) && (
-                <div className="text-xs text-gray-500">
-                  Select an event and a room to see fixed-slot availability.
-                </div>
-              )}
 
               {mode === 'event' ? (
                 <div className="form-group">
@@ -620,7 +578,7 @@ export default function RoomBooking() {
                                   return next
                                 })
                               }}
-                              className={`p-2 rounded-lg text-sm border transition ${slotCls} ${isAvailable ? 'cursor-pointer' : 'cursor-not-allowed opacity-60'}`}
+                              className={`p-2 rounded-lg text-sm border transition ${slotCls} ${isAvailable ? 'cursor-pointer' : 'cursor-not-allowed opacity-50'}`}
                             >
                               <div className="font-medium">{slot}</div>
                             </button>
@@ -654,9 +612,9 @@ export default function RoomBooking() {
                 </>
               )}
 
-              <div className={`grid grid-cols-1 ${isFaculty || mode === 'meeting' ? 'md:grid-cols-1' : 'md:grid-cols-3'} gap-4`}>
+              <div className={`grid grid-cols-1 ${mode === 'meeting' ? 'md:grid-cols-1' : 'md:grid-cols-3'} gap-4`}>
                 <div className="form-group">
-                  <label className="form-label">{isFaculty ? 'Select Room' : 'Preference 1'}</label>
+                  <label className="form-label">{mode === 'meeting' ? 'Select Room' : 'Preference 1'}</label>
                   <select
                     className="form-select"
                     value={pref1}
@@ -697,7 +655,7 @@ export default function RoomBooking() {
                   )}
                 </div>
 
-                {!isFaculty && mode === 'event' && (
+                {mode === 'event' && (
                   <>
                     <div className="form-group">
                       <label className="form-label">Preference 2</label>
@@ -891,17 +849,13 @@ export default function RoomBooking() {
                   </div>
                   <div className="flex items-start">
                     <span className="mr-2">✅</span>
-                    <span>Faculty: Immediate approval without admin processing</span>
-                  </div>
-                  <div className="flex items-start">
-                    <span className="mr-2">⏳</span>
-                    <span>Club Associates: Admin approval required</span>
+                    <span>Instant approval if room is available in selected window</span>
                   </div>
                 </>
               )}
               <div className="flex items-start">
                 <span className="mr-2">👥</span>
-                <span>{isFaculty ? 'Faculty: Select 1 room (immediate approval)' : 'Club Associates: Select 3 room preferences (admin approval)'}</span>
+                <span>{mode === 'meeting' ? 'Meeting booking: Select 1 room (instant booking)' : 'Event booking: Select 3 room preferences (requires approval)'}</span>
               </div>
               <div className="flex items-start">
                 <span className="mr-2">🏛️</span>

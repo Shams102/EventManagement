@@ -29,17 +29,20 @@ public class EventController {
     private final UserRepository userRepository;
     private final EventRepository eventRepository;
     private final BuildingRepository buildingRepository;
+    private final com.campus.event.service.BuildingTimetableService buildingTimetableService;
     private final EventRegistrationRepository registrationRepository;
     private final NotificationService notificationService;
 
     public EventController(EventService eventService, UserRepository userRepository,
                            EventRepository eventRepository, BuildingRepository buildingRepository,
+                           com.campus.event.service.BuildingTimetableService buildingTimetableService,
                            EventRegistrationRepository registrationRepository,
                            NotificationService notificationService) {
         this.eventService = eventService;
         this.userRepository = userRepository;
         this.eventRepository = eventRepository;
         this.buildingRepository = buildingRepository;
+        this.buildingTimetableService = buildingTimetableService;
         this.registrationRepository = registrationRepository;
         this.notificationService = notificationService;
     }
@@ -50,6 +53,11 @@ public class EventController {
             @Valid @RequestBody CreateEventRequest request,
             @AuthenticationPrincipal UserDetails principal
     ) {
+        // Core Protection: Intercept Zero or Negative duration inputs globally before DB validation triggers a 500 Constraint Error
+        if (!request.getEnd().isAfter(request.getStart())) {
+            return ResponseEntity.badRequest().body("Event end time must be strictly after the start time.");
+        }
+
         Building building = buildingRepository.findById(request.getBuildingId())
                 .orElseThrow(() -> new IllegalArgumentException(
                         "Building not found with ID: " + request.getBuildingId()));
@@ -59,18 +67,91 @@ public class EventController {
             u.setUsername(principal.getUsername());
             return u;
         });
-        Event event = eventService.createEvent(
-                request.getTitle(),
-                request.getDescription(),
-                request.getStart(),
-                request.getEnd(),
-                creator,
-                building,
-                request.getLocation(),
-                request.getClubId(),
-                request.getRegistrationSchema(),
-                request.getMaxAttendees()
-        );
+
+        // Parse timing model (defaults to SINGLE_DAY)
+        com.campus.event.domain.EventTimingModel timingModel = com.campus.event.domain.EventTimingModel.SINGLE_DAY;
+        if (request.getTimingModel() != null && !request.getTimingModel().isBlank()) {
+            try {
+                timingModel = com.campus.event.domain.EventTimingModel.valueOf(request.getTimingModel());
+            } catch (IllegalArgumentException e) {
+                return ResponseEntity.badRequest().body("Invalid timingModel: " + request.getTimingModel());
+            }
+        }
+
+        // Build explicit time slots for FLEXIBLE mode
+        java.util.List<com.campus.event.domain.EventTimeSlot> explicitSlots = null;
+        if (request.getTimeSlots() != null && !request.getTimeSlots().isEmpty()) {
+            explicitSlots = new java.util.ArrayList<>();
+            for (CreateEventRequest.TimeSlotInput ts : request.getTimeSlots()) {
+                if (ts.getSlotStart() == null || ts.getSlotEnd() == null) {
+                    return ResponseEntity.badRequest().body("Each time slot must have slotStart and slotEnd");
+                }
+                if (!ts.getSlotEnd().isAfter(ts.getSlotStart())) {
+                    return ResponseEntity.badRequest().body("slotEnd must be strictly after slotStart (Positive duration)");
+                }
+                explicitSlots.add(new com.campus.event.domain.EventTimeSlot(null, ts.getSlotStart(), ts.getSlotEnd(), null));
+            }
+
+            // Enforce internal chronology for algorithmic checks
+            explicitSlots.sort(java.util.Comparator.comparing(com.campus.event.domain.EventTimeSlot::getSlotStart));
+
+            // Validate parent bounds containment
+            if (explicitSlots.get(0).getSlotStart().isBefore(request.getStart()) || 
+                explicitSlots.get(explicitSlots.size() - 1).getSlotEnd().isAfter(request.getEnd())) {
+                return ResponseEntity.badRequest().body("Flexible slots must logically reside entirely within the global start and end bounds.");
+            }
+
+            // O(N) overlap iteration trap
+            for (int i = 0; i < explicitSlots.size() - 1; i++) {
+                if (explicitSlots.get(i).getSlotEnd().isAfter(explicitSlots.get(i + 1).getSlotStart())) {
+                    return ResponseEntity.badRequest().body("Overlapping flexible slots detected. Please resolve internal conflicts before submission.");
+                }
+            }
+        }
+
+        // Global limits & Continuous blocking logic
+        long maximumDaysSpan = java.time.temporal.ChronoUnit.DAYS.between(request.getStart(), request.getEnd());
+        if (maximumDaysSpan > 30) {
+            return ResponseEntity.badRequest().body("Events cannot span more than 30 consecutive days.");
+        }
+
+        if (timingModel == com.campus.event.domain.EventTimingModel.MULTI_DAY_CONTINUOUS || timingModel == com.campus.event.domain.EventTimingModel.SINGLE_DAY) {
+            if (!buildingTimetableService.isBookingWithinBuildingHours(building.getId(), request.getStart(), request.getEnd())) {
+                return ResponseEntity.badRequest().body("Continuous or Single Day logic illegally expands outside building operational hours. Please isolate specific times via the FLEXIBLE builder.");
+            }
+        }
+
+        // Validate complex multi-day boundaries
+        if (timingModel == com.campus.event.domain.EventTimingModel.FLEXIBLE && (explicitSlots == null || explicitSlots.isEmpty())) {
+            return ResponseEntity.badRequest().body("FLEXIBLE timing model requires specific time slots.");
+        }
+        if (timingModel == com.campus.event.domain.EventTimingModel.MULTI_DAY_FIXED) {
+            java.time.LocalDate startDate = request.getStart().toLocalDate();
+            java.time.LocalDate endDate = request.getEnd().toLocalDate();
+            if (!endDate.isAfter(startDate)) {
+                return ResponseEntity.badRequest().body("MULTI_DAY_FIXED requires an end date strictly after the start date.");
+            }
+        }
+
+        Event event;
+        try {
+            event = eventService.createEvent(
+                    request.getTitle(),
+                    request.getDescription(),
+                    request.getStart(),
+                    request.getEnd(),
+                    creator,
+                    building,
+                    request.getLocation(),
+                    request.getClubId(),
+                    request.getRegistrationSchema(),
+                    request.getMaxAttendees(),
+                    timingModel,
+                    explicitSlots
+            );
+        } catch (IllegalArgumentException ex) {
+            return ResponseEntity.badRequest().body(ex.getMessage());
+        }
         return ResponseEntity.ok(event.getId());
     }
 

@@ -82,23 +82,13 @@ public class RoomManagementService {
         return roomRepository.save(room);
     }
     
-    // Initialize default building structure
-    // Initialize building structures
+    // Initialize building structures (operates on EXISTING buildings only — never creates new ones)
     public void initializeBuildings() {
-        Building ab1 = null;
-        Building ab2 = null;
+        Building ab1 = buildingRepository.findByCode("BLD_A").orElse(null);
+        Building ab2 = buildingRepository.findByCode("BLD_B").orElse(null);
 
-        if (buildingRepository.count() == 0) {
-            ab1 = createBuilding("Academic Block 1", "AB1", "Main Academic Block");
-            ab2 = createBuilding("Academic Block 2", "AB2", "Engineering Block");
-        } else {
-            List<Building> buildings = buildingRepository.findByIsActiveTrue();
-            if (buildings.size() >= 1) ab1 = buildings.get(0);
-            if (buildings.size() >= 2) ab2 = buildings.get(1);
-        }
-
-        if (ab1 != null) setupBuildingFloorsAndRooms(ab1, "AB1", true);
-        if (ab2 != null) setupBuildingFloorsAndRooms(ab2, "AB2", false);
+        if (ab1 != null) setupBuildingFloorsAndRooms(ab1, "A", true);
+        if (ab2 != null) setupBuildingFloorsAndRooms(ab2, "B", false);
     }
 
     private void setupBuildingFloorsAndRooms(Building building, String prefix, boolean hasAuditorium) {

@@ -36,11 +36,13 @@ export default function CreateEvent() {
   const [buildings, setBuildings] = useState([])
   const [error, setError] = useState('')
   const [message, setMessage] = useState('')
+  const [timingModel, setTimingModel] = useState('SINGLE_DAY')
+  const [timeSlots, setTimeSlots] = useState([])
   const [loading, setLoading] = useState(false)
 
   useEffect(() => {
     api.get('/api/public/buildings')
-      .then(res => setBuildings(res.data || []))
+      .then(res => setBuildings((res.data || []).filter(b => b.id && b.name)))
       .catch(() => setBuildings([]))
   }, [])
 
@@ -76,6 +78,23 @@ export default function CreateEvent() {
       const endDt = new Date(`${endLocal}:00`)
       if (startDt < now) { setError('Start time cannot be in the past'); setLoading(false); return }
       if (endDt <= startDt) { setError('End time must be after start time'); setLoading(false); return }
+      
+      if (timingModel === 'FLEXIBLE') {
+        if (timeSlots.length === 0) {
+          setError('Flexible timing requires at least one custom time slot'); setLoading(false); return;
+        }
+        for (let i = 0; i < timeSlots.length; i++) {
+          const ts = timeSlots[i];
+          if (!ts.date || !ts.start || !ts.end) {
+            setError('Please complete all date and time fields for flexible slots'); setLoading(false); return;
+          }
+          const s = new Date(`${ts.date}T${ts.start}:00`);
+          const e = new Date(`${ts.date}T${ts.end}:00`);
+          if (e <= s) {
+            setError(`Slot ${i + 1} end time must be after its start time`); setLoading(false); return;
+          }
+        }
+      }
 
       // Send local time as 'YYYY-MM-DDTHH:MM:SS' so backend LocalDateTime stores the same local time.
       const startValue = `${startLocal}:00`
@@ -89,7 +108,12 @@ export default function CreateEvent() {
         location: loc.trim() || undefined,
         clubId: club || undefined,
         maxAttendees: maxAttendees ? Number(maxAttendees) : undefined,
-        registrationSchema
+        registrationSchema,
+        timingModel: timingModel,
+        timeSlots: timingModel === 'FLEXIBLE' ? timeSlots.map(ts => ({
+          slotStart: `${ts.date}T${ts.start}:00`,
+          slotEnd: `${ts.date}T${ts.end}:00`
+        })) : undefined
       })
       if (res.status === 200) {
         setMessage('Event created')
@@ -196,8 +220,62 @@ export default function CreateEvent() {
                     <TimeSelect value={endTime} onChange={setEndTime} required />
                   </div>
                   {startDate && endDate && startDate !== endDate && (
-                    <div className="mt-2 text-xs font-medium text-purple-400">
-                      ✨ This will be a multi-day event
+                    <div className="mt-4 p-4 rounded-lg bg-[#0F172A] border border-[#1F2937] sm:col-span-2">
+                      <label className="form-label text-purple-400">✨ Multi-Day Event Settings</label>
+                      <select 
+                        className="form-input mt-2" 
+                        value={timingModel}
+                        onChange={(e) => setTimingModel(e.target.value)}
+                      >
+                        <option value="SINGLE_DAY">Treat as single continuous block (Legacy - binds 24/7)</option>
+                        <option value="MULTI_DAY_FIXED">Fixed Daily Schedule (Repeats start/end time each day)</option>
+                        <option value="MULTI_DAY_CONTINUOUS">Continuous Overnight Event (e.g. Hackathons)</option>
+                        <option value="FLEXIBLE">Flexible (Custom times for each day)</option>
+                      </select>
+                      
+                      {timingModel === 'SINGLE_DAY' && (
+                        <div className="mt-2 text-xs text-rose-400">Warning: This locks the room 24/7 across all selected days, causing massive scheduling conflicts. Consider using 'Fixed Daily Schedule'.</div>
+                      )}
+                      
+                      {timingModel === 'MULTI_DAY_FIXED' && (
+                        <div className="mt-2 text-xs text-emerald-400">The room will exclusively be reserved from {startTime || 'Start'} to {endTime || 'End'} on every calendar day within the range.</div>
+                      )}
+                      
+                      {timingModel === 'MULTI_DAY_CONTINUOUS' && (
+                        <div className="mt-2 text-xs text-amber-400">Event runs continuously across midnight without stopping. Note: The building must allow overnight hours.</div>
+                      )}
+                      
+                      {timingModel === 'FLEXIBLE' && (
+                        <div className="mt-4 space-y-3 border-t border-[#1F2937] pt-4">
+                          <label className="text-sm font-semibold text-[#E5E7EB]">Custom Time Slots Builder</label>
+                          {timeSlots.map((ts, idx) => (
+                             <div key={idx} className="flex flex-col sm:flex-row gap-2 items-center bg-[#111827] p-2 rounded border border-[#374151]">
+                               <input type="date" className="form-input text-sm py-1" value={ts.date || ''} onChange={(e) => {
+                                 const newSlots = [...timeSlots];
+                                 newSlots[idx].date = e.target.value;
+                                 setTimeSlots(newSlots);
+                               }} min={startDate} max={endDate} />
+                               <input type="time" className="form-input text-sm py-1" value={ts.start || ''} onChange={(e) => {
+                                 const newSlots = [...timeSlots];
+                                 newSlots[idx].start = e.target.value;
+                                 setTimeSlots(newSlots);
+                               }} />
+                               <span className="text-[#9CA3AF] hidden sm:block">to</span>
+                               <input type="time" className="form-input text-sm py-1" value={ts.end || ''} onChange={(e) => {
+                                 const newSlots = [...timeSlots];
+                                 newSlots[idx].end = e.target.value;
+                                 setTimeSlots(newSlots);
+                               }} />
+                               <button type="button" className="p-1 px-2 text-rose-400 hover:text-rose-300 font-bold bg-[#1F2937] rounded" onClick={() => {
+                                 setTimeSlots(timeSlots.filter((_, i) => i !== idx));
+                               }}>×</button>
+                             </div>
+                          ))}
+                          <button type="button" className="btn btn-secondary btn-sm mt-1" onClick={() => setTimeSlots([...timeSlots, { date: '', start: '', end: '' }])}>
+                            + Add Custom Slot
+                          </button>
+                        </div>
+                      )}
                     </div>
                   )}
                 </div>

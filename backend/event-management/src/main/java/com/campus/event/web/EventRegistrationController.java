@@ -76,12 +76,13 @@ public class EventRegistrationController {
         User user = userRepository.findByUsername(principal.getUsername()).orElse(null);
         if (user == null) return ResponseEntity.status(401).build();
 
-        // role checks: Admins/Faculty cannot register
+        // role checks: Admins cannot register
         Set<String> roles = SecurityContextHolder.getContext().getAuthentication().getAuthorities().stream()
                 .map(GrantedAuthority::getAuthority)
                 .collect(Collectors.toSet());
-        if (roles.contains("ROLE_ADMIN") || roles.contains("ROLE_FACULTY")) {
-            return ResponseEntity.status(403).body("Admins and Faculty cannot register for events");
+        if (roles.contains("ROLE_ADMIN")
+                || roles.contains("ROLE_BUILDING_ADMIN") || roles.contains("ROLE_CENTRAL_ADMIN")) {
+            return ResponseEntity.status(403).body("Admins cannot register for events");
         }
 
         // club associates cannot register for their own club events

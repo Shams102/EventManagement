@@ -102,6 +102,39 @@ public class ScheduleService {
         return conflicts;
     }
 
+    /**
+     * Multi-slot-aware validation: checks each time slot individually for conflicts.
+     * Used for MULTI_DAY_FIXED and FLEXIBLE events where conflicts must be checked per-day.
+     */
+    public Map<String, List<String>> validateEventRoomPreferencesMultiSlot(
+            Long pref1Id, Long pref2Id, Long pref3Id,
+            List<com.campus.event.domain.EventTimeSlot> timeSlots) {
+        if (timeSlots == null || timeSlots.isEmpty()) {
+            return new HashMap<>();
+        }
+
+        // If single slot, delegate to the standard method
+        if (timeSlots.size() == 1) {
+            com.campus.event.domain.EventTimeSlot slot = timeSlots.get(0);
+            return validateEventRoomPreferences(pref1Id, pref2Id, pref3Id, slot.getSlotStart(), slot.getSlotEnd());
+        }
+
+        Map<String, List<String>> conflicts = new HashMap<>();
+        Long[] prefIds = {pref1Id, pref2Id, pref3Id};
+        for (Long prefId : prefIds) {
+            if (prefId == null) continue;
+            List<String> allMessages = new ArrayList<>();
+            for (com.campus.event.domain.EventTimeSlot slot : timeSlots) {
+                List<String> slotConflicts = getRoomConflicts(prefId, slot.getSlotStart(), slot.getSlotEnd());
+                for (String msg : slotConflicts) {
+                    allMessages.add("[Day " + (slot.getDayIndex() != null ? slot.getDayIndex() + 1 : "?") + "] " + msg);
+                }
+            }
+            conflicts.put(prefId.toString(), allMessages);
+        }
+        return conflicts;
+    }
+
     public List<String> getRoomConflicts(Long roomId, LocalDateTime start, LocalDateTime end) {
         List<String> messages = new ArrayList<>();
         Room room = roomRepository.findById(roomId).orElse(null);

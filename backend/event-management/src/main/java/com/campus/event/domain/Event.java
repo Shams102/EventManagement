@@ -55,6 +55,14 @@ public class Event {
     @Column(columnDefinition = "TEXT")
     private String registrationSchema; // JSON array of field keys
 
+    @Enumerated(EnumType.STRING)
+    @Column(name = "timing_model", nullable = false)
+    private EventTimingModel timingModel = EventTimingModel.SINGLE_DAY;
+
+    @OneToMany(mappedBy = "event", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
+    @OrderBy("slotStart ASC")
+    private java.util.List<EventTimeSlot> timeSlots = new java.util.ArrayList<>();
+
     // Explicit getters and setters
     public Long getId() { return id; }
     public String getTitle() { return title; }
@@ -79,4 +87,8 @@ public class Event {
     public void setMaxAttendees(Integer maxAttendees) { this.maxAttendees = maxAttendees; }
     public String getRegistrationSchema() { return registrationSchema; }
     public void setRegistrationSchema(String registrationSchema) { this.registrationSchema = registrationSchema; }
+    public EventTimingModel getTimingModel() { return timingModel; }
+    public void setTimingModel(EventTimingModel timingModel) { this.timingModel = timingModel; }
+    public java.util.List<EventTimeSlot> getTimeSlots() { return timeSlots; }
+    public void setTimeSlots(java.util.List<EventTimeSlot> timeSlots) { this.timeSlots = timeSlots; }
 }

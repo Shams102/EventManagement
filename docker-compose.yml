@@ -32,7 +32,8 @@ services:
       SPRING_DATASOURCE_PASSWORD: ${SPRING_DATASOURCE_PASSWORD:-postgres}
       APP_SECURITY_JWTSECRET: ${APP_SECURITY_JWTSECRET:-change-this-dev-secret-at-least-32-chars-long}
       JWT_EXPIRATION_MS: ${JWT_EXPIRATION_MS:-3600000}
-      JPA_DDL_AUTO: ${JPA_DDL_AUTO:-update}
+      JPA_DDL_AUTO: validate
+      SPRING_FLYWAY_ENABLED: "true"
       CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS:-http://localhost:3000,http://localhost:5173}
       MAIL_HOST: ${MAIL_HOST:-}
       MAIL_PORT: ${MAIL_PORT:-587}

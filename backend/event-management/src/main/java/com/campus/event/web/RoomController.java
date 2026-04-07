@@ -30,7 +30,9 @@ public class RoomController {
     @PreAuthorize("hasAnyRole('GENERAL_USER','CLUB_ASSOCIATE','FACULTY','ADMIN','CENTRAL_ADMIN','BUILDING_ADMIN')")
     @Transactional(readOnly = true)
     public List<Map<String, Object>> listRooms() {
-        return roomRepository.findAll().stream().map(r -> {
+        return roomRepository.findAll().stream()
+            .filter(r -> r.getFloor() != null && r.getFloor().getBuilding() != null)
+            .map(r -> {
             Map<String, Object> m = new HashMap<>();
             m.put("id", r.getId());
             m.put("name", r.getName());
@@ -38,10 +40,8 @@ public class RoomController {
             m.put("type", r.getType());
             m.put("capacity", r.getCapacity());
             m.put("amenities", r.getAmenities());
-            if (r.getFloor() != null && r.getFloor().getBuilding() != null) {
-                m.put("buildingId", r.getFloor().getBuilding().getId());
-                m.put("buildingName", r.getFloor().getBuilding().getName());
-            }
+            m.put("buildingId", r.getFloor().getBuilding().getId());
+            m.put("buildingName", r.getFloor().getBuilding().getName());
             return m;
         }).collect(Collectors.toList());
     }

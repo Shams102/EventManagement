@@ -240,6 +240,28 @@ function ApprovalItem({ req, rooms, onApprove, onReject, hasRole }) {
             </div>
           )}
           <div className="mt-1 text-sm text-[#9CA3AF]">Starts: {new Date(req.start).toLocaleString()}</div>
+          
+          {req.timingModel && req.timingModel !== 'SINGLE_DAY' && (
+            <div className="mt-2 mb-2 p-3 bg-[#0F172A] border border-[#1F2937] rounded-lg">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-xs font-bold px-2 py-1 bg-purple-500/20 text-purple-300 rounded border border-purple-500/30">
+                  {req.timingModel.replace(/_/g, ' ')} ({req.slotCount || 1} Days)
+                </span>
+              </div>
+              {req.slots && req.slots.length > 0 && (
+                <div className="space-y-1 mt-2 border-t border-[#1F2937] pt-2 max-h-32 overflow-y-auto pr-2 custom-scrollbar">
+                  {req.slots.map((slot, idx) => (
+                    <div key={idx} className="flex justify-between text-xs text-[#9CA3AF]">
+                      <span>Day {idx + 1}: <span className="text-[#E5E7EB]">{new Date(slot.start).toLocaleDateString()}</span></span>
+                      <span className="text-[#E5E7EB]">
+                        {new Date(slot.start).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})} - {new Date(slot.end).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
           <div className="text-sm text-[#9CA3AF]">Requested by: {req.requestedBy}</div>
           <div className="text-sm text-[#9CA3AF] mt-2">
             Preferences:

@@ -2,11 +2,18 @@ package com.campus.event.config;
 
 import com.campus.event.domain.AdminScope;
 import com.campus.event.domain.Building;
+import com.campus.event.domain.BuildingTimetable;
 import com.campus.event.domain.Event;
+import com.campus.event.domain.Floor;
 import com.campus.event.domain.Role;
+import com.campus.event.domain.Room;
+import com.campus.event.domain.RoomType;
 import com.campus.event.domain.User;
 import com.campus.event.repository.BuildingRepository;
+import com.campus.event.repository.BuildingTimetableRepository;
 import com.campus.event.repository.EventRepository;
+import com.campus.event.repository.FloorRepository;
+import com.campus.event.repository.RoomRepository;
 import com.campus.event.repository.UserRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -15,7 +22,9 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
+import java.time.DayOfWeek;
 import java.time.LocalDateTime;
+import java.time.LocalTime;
 import java.util.Set;
 
 @Configuration
@@ -25,7 +34,9 @@ public class DataInitializer {
 
     @Bean
     CommandLineRunner seedData(UserRepository users, EventRepository events,
-                               BuildingRepository buildings, PasswordEncoder encoder) {
+                               BuildingRepository buildings, BuildingTimetableRepository timetables,
+                               FloorRepository floors, RoomRepository rooms,
+                               PasswordEncoder encoder) {
         return args -> {
             // Migrate any existing users with non-BCrypt passwords to encoded values
             users.findAll().forEach(u -> {
@@ -47,6 +58,15 @@ public class DataInitializer {
                 log.info("Seeded central admin user");
             }
 
+            // ── Buildings + Timetables (idempotent) ──
+            ensureBuildingAndTimetableExists(buildings, timetables, "BLD_A", "Building A");
+            ensureBuildingAndTimetableExists(buildings, timetables, "BLD_B", "Building B");
+
+            // ── Floors + Rooms (idempotent) ──
+            buildings.findByCode("BLD_A").ifPresent(b -> ensureFloorsAndRoomsExist(b, floors, rooms, true));
+            buildings.findByCode("BLD_B").ifPresent(b -> ensureFloorsAndRoomsExist(b, floors, rooms, false));
+
+            // ── Admin users ──
             syncBuildingAdmin(buildings, users, "ab1_admin", "BLD_A", AdminScope.LARGE_HALL);
             syncBuildingAdmin(buildings, users, "ab2_admin", "BLD_B", AdminScope.LARGE_HALL);
 
@@ -115,13 +135,14 @@ public class DataInitializer {
 
             if (events.count() == 0) {
                 // Find the first active building to assign to sample events
-                Building defaultBuilding = buildings.findByIsActiveTrue().stream()
-                        .findFirst()
-                        .orElseGet(() -> {
-                            log.warn("No active buildings found. Creating a default building for seed events.");
-                            Building b = new Building("Main Building", "MAIN", "Default building for seed data");
-                            return buildings.save(b);
-                        });
+                Building defaultBuilding = buildings.findByCode("BLD_A")
+                        .orElseGet(() -> buildings.findByIsActiveTrue().stream()
+                                .findFirst()
+                                .orElseGet(() -> {
+                                    log.warn("No active buildings found. Creating a default building for seed events.");
+                                    Building b = new Building("Main Building", "MAIN", "Default building for seed data");
+                                    return buildings.save(b);
+                                }));
 
                 Event e1 = new Event();
                 e1.setTitle("Orientation Week");
@@ -145,6 +166,102 @@ public class DataInitializer {
             }
         };
     }
+
+    // ── Building + Timetable (unchanged) ──
+
+    private static void ensureBuildingAndTimetableExists(BuildingRepository buildings, BuildingTimetableRepository timetables, String code, String name) {
+        Building b = buildings.findByCode(code).orElseGet(() -> {
+            Building newBuilding = new Building(name, code, "Structured campus building " + name);
+
+            buildings.save(newBuilding);
+            log.info("Seeded missing building: {}", code);
+            return newBuilding;
+        });
+
+        // Ensure timetable exists for all 7 days
+        for (DayOfWeek day : DayOfWeek.values()) {
+            if (timetables.findByBuilding_IdAndDayOfWeekOrderByStartTimeAsc(b.getId(), day).isEmpty()) {
+                BuildingTimetable bt = new BuildingTimetable();
+                bt.setBuilding(b);
+                bt.setDayOfWeek(day);
+                bt.setStartTime(LocalTime.of(8, 0));
+                bt.setEndTime(LocalTime.of(22, 0));
+                timetables.save(bt);
+            }
+        }
+    }
+
+    // ── Floors + Rooms (NEW — idempotent) ──
+
+    private static void ensureFloorsAndRoomsExist(Building building, FloorRepository floors,
+                                                   RoomRepository rooms, boolean hasAuditorium) {
+        String code = building.getCode();
+        String prefix = "BLD_A".equals(code) ? "A" : "B";
+
+        // Floor 0 — Ground Floor
+        Floor ground = ensureFloorExists(building, floors, 0, "Ground Floor");
+        ensureRoomExists(rooms, ground, prefix + "-G01", "Lecture Hall 1", RoomType.LECTURE_HALL, 120);
+        ensureRoomExists(rooms, ground, prefix + "-G02", "Lecture Hall 2", RoomType.LECTURE_HALL, 120);
+        ensureRoomExists(rooms, ground, prefix + "-G03", "Computer Lab", RoomType.LAB, 60);
+        if (hasAuditorium) {
+            ensureRoomExists(rooms, ground, prefix + "-G04", "Main Auditorium", RoomType.AUDITORIUM, 300);
+        }
+
+        // Floor 1 — First Floor
+        Floor first = ensureFloorExists(building, floors, 1, "First Floor");
+        ensureRoomExists(rooms, first, prefix + "-101", "Classroom 1", RoomType.CLASSROOM, 40);
+        ensureRoomExists(rooms, first, prefix + "-102", "Classroom 2", RoomType.CLASSROOM, 40);
+        ensureRoomExists(rooms, first, prefix + "-103", "Seminar Hall", RoomType.SEMINAR_HALL, 80);
+        ensureRoomExists(rooms, first, prefix + "-104", "Meeting Room 1", RoomType.MEETING_ROOM, 20);
+
+        // Floor 2 — Second Floor
+        Floor second = ensureFloorExists(building, floors, 2, "Second Floor");
+        ensureRoomExists(rooms, second, prefix + "-201", "Classroom 3", RoomType.CLASSROOM, 40);
+        ensureRoomExists(rooms, second, prefix + "-202", "Classroom 4", RoomType.CLASSROOM, 40);
+        if (hasAuditorium) {
+            ensureRoomExists(rooms, second, prefix + "-203", "Physics Lab", RoomType.LAB, 30);
+            ensureRoomExists(rooms, second, prefix + "-204", "Chemistry Lab", RoomType.LAB, 30);
+        } else {
+            ensureRoomExists(rooms, second, prefix + "-203", "Electronics Lab", RoomType.LAB, 30);
+            ensureRoomExists(rooms, second, prefix + "-204", "Workshop", RoomType.LAB, 30);
+        }
+
+        log.info("Ensured floors and rooms exist for building: {} ({})", building.getName(), code);
+    }
+
+    /**
+     * Finds or creates a floor for the given building and floor number.
+     * Idempotent: uses existsByBuildingIdAndFloorNumber before inserting.
+     */
+    private static Floor ensureFloorExists(Building building, FloorRepository floors,
+                                            int floorNumber, String name) {
+        Floor existing = floors.findByBuildingIdAndFloorNumber(building.getId(), floorNumber);
+        if (existing != null) {
+            return existing;
+        }
+        Floor floor = new Floor(floorNumber, name, building);
+        floors.save(floor);
+        log.info("  Created floor: {} (#{}) in {}", name, floorNumber, building.getName());
+        return floor;
+    }
+
+    /**
+     * Finds or creates a room on the given floor by name.
+     * Idempotent: uses findByNameAndFloorId before inserting.
+     */
+    private static void ensureRoomExists(RoomRepository rooms, Floor floor,
+                                          String roomNumber, String name,
+                                          RoomType type, int capacity) {
+        if (rooms.findByNameAndFloorId(name, floor.getId()).isPresent()) {
+            return; // already seeded
+        }
+        Room room = new Room(roomNumber, name, type, capacity, floor);
+        room.setAmenities("Projector, Whiteboard, WiFi");
+        rooms.save(room);
+        log.info("    Created room: {} ({}) — {} seats, type={}", name, roomNumber, capacity, type);
+    }
+
+    // ── Admin helpers (unchanged) ──
 
     private static void syncBuildingAdmin(BuildingRepository buildings, UserRepository users,
                                           String username, String buildingCode, AdminScope scope) {
@@ -184,6 +301,7 @@ public class DataInitializer {
             u.setManagedBuildingId(b.getId());
             u.setAdminScope(scope);
             users.save(u);
+            log.info("Seeded user {} for building {}", username, buildingCode);
         });
     }
 }

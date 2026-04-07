@@ -3,6 +3,7 @@ package com.campus.event.web;
 import com.campus.event.repository.UserRepository;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.HashMap;
@@ -38,11 +39,23 @@ public class AdminController {
 
     @PostMapping("/role-requests/{userId}/approve")
     @PreAuthorize("hasAnyRole('ADMIN','CENTRAL_ADMIN')")
-    public ResponseEntity<?> approve(@PathVariable Long userId) {
+    public ResponseEntity<?> approve(@PathVariable Long userId,
+                                     @AuthenticationPrincipal org.springframework.security.core.userdetails.UserDetails principal) {
         return userRepository.findById(userId)
                 .map(user -> {
                     if (user.getRequestedRole() == null) {
                         return ResponseEntity.badRequest().body("No pending role request for this user");
+                    }
+                    // Only CENTRAL_ADMIN can approve elevation to CENTRAL_ADMIN or BUILDING_ADMIN
+                    com.campus.event.domain.Role requested = user.getRequestedRole();
+                    if (requested == com.campus.event.domain.Role.CENTRAL_ADMIN
+                            || requested == com.campus.event.domain.Role.BUILDING_ADMIN) {
+                        boolean isCentralAdmin = principal.getAuthorities().stream()
+                                .anyMatch(a -> a.getAuthority().equals("ROLE_CENTRAL_ADMIN"));
+                        if (!isCentralAdmin) {
+                            return ResponseEntity.status(403)
+                                    .body("Only CENTRAL_ADMIN can approve CENTRAL_ADMIN or BUILDING_ADMIN roles");
+                        }
                     }
                     user.getRoles().add(user.getRequestedRole());
                     user.setRequestedRole(null);
