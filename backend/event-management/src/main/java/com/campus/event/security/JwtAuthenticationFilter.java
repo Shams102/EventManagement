@@ -9,6 +9,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import io.jsonwebtoken.JwtException;
 import org.springframework.lang.NonNull;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -24,6 +25,8 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     private final JwtTokenService jwtTokenService;
     private final CustomUserDetailsService userDetailsService;
     private final UserRepository userRepository;
+    @Value("${app.security.enforce-single-session:true}")
+    private boolean enforceSingleSession;
 
     public JwtAuthenticationFilter(JwtTokenService jwtTokenService, CustomUserDetailsService userDetailsService, UserRepository userRepository) {
         this.jwtTokenService = jwtTokenService;
@@ -41,13 +44,15 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             try {
                 String username = jwtTokenService.extractUsername(jwt);
                 if (username != null && SecurityContextHolder.getContext().getAuthentication() == null) {
-                    User dbUser = userRepository.findByUsername(username).orElse(null);
-                    if (dbUser == null || dbUser.getActiveSessionToken() == null || !jwt.equals(dbUser.getActiveSessionToken())) {
-                        SecurityContextHolder.clearContext();
-                        response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
-                        response.setContentType("application/json");
-                        response.getWriter().write("{\"error\":\"Already logged in on another device.\"}");
-                        return;
+                    if (enforceSingleSession) {
+                        User dbUser = userRepository.findByUsername(username).orElse(null);
+                        if (dbUser == null || dbUser.getActiveSessionToken() == null || !jwt.equals(dbUser.getActiveSessionToken())) {
+                            SecurityContextHolder.clearContext();
+                            response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+                            response.setContentType("application/json");
+                            response.getWriter().write("{\"error\":\"Already logged in on another device.\"}");
+                            return;
+                        }
                     }
                     UserDetails userDetails = userDetailsService.loadUserByUsername(username);
                     if (jwtTokenService.isTokenValid(jwt, userDetails)) {
