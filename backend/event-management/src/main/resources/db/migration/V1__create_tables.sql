@@ -195,8 +195,17 @@ CREATE TABLE IF NOT EXISTS public.users (
     username character varying(255) NOT NULL
 );
 
-ALTER TABLE ONLY public.bookings
-    ADD CONSTRAINT uk45c3i9pv4vs1s930in6t1ihkr UNIQUE (room_id, start_time, end_time);
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1
+        FROM pg_constraint
+        WHERE conname = 'uk45c3i9pv4vs1s930in6t1ihkr'
+    ) THEN
+        ALTER TABLE ONLY public.bookings
+            ADD CONSTRAINT uk45c3i9pv4vs1s930in6t1ihkr UNIQUE (room_id, start_time, end_time);
+    END IF;
+END $$;
 
 ALTER TABLE ONLY public.registrations
     ADD CONSTRAINT ukfd5jwq59i87waqf4u1hhuntkr UNIQUE (event_id, email);
