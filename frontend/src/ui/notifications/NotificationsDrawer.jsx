@@ -33,6 +33,7 @@ export default function NotificationsDrawer({ open, onClose }) {
     try {
       await markDeliveryRead(item.deliveryId)
       setItems(prev => prev.map(i => i.deliveryId === item.deliveryId ? { ...i, read: true } : i))
+      window.dispatchEvent(new Event('notifications-updated'))
     } catch (err) {
       console.error(err)
     }
@@ -74,6 +75,7 @@ export default function NotificationsDrawer({ open, onClose }) {
             const unread = items.filter(i => !i.read)
             await Promise.all(unread.map(i => markDeliveryRead(i.deliveryId).catch(()=>{})))
             setItems(prev => prev.map(x => ({ ...x, read: true })))
+            window.dispatchEvent(new Event('notifications-updated'))
           }} aria-label="Mark all as read">Mark all</button>
           <button className="btn btn-sm btn-ghost" onClick={() => { onClose && onClose(); window.location.assign('/notifications') }} aria-label="View all notifications">View all</button>
         </div>

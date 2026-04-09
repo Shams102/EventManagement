@@ -27,6 +27,14 @@ public interface FixedTimetableRepository extends JpaRepository<FixedTimetable, 
                                                @Param("dayOfWeek") DayOfWeek dayOfWeek,
                                                @Param("startTime") LocalTime startTime,
                                                @Param("endTime") LocalTime endTime);
+
+    @Query("SELECT (COUNT(ft) > 0) FROM FixedTimetable ft WHERE ft.room.id = :roomId AND " +
+           "ft.dayOfWeek = :dayOfWeek AND ft.isActive = true AND " +
+           "ft.startTime < :endTime AND ft.endTime > :startTime")
+    boolean existsConflictingClass(@Param("roomId") Long roomId,
+                                   @Param("dayOfWeek") DayOfWeek dayOfWeek,
+                                   @Param("startTime") LocalTime startTime,
+                                   @Param("endTime") LocalTime endTime);
     
     @Query("SELECT ft FROM FixedTimetable ft WHERE ft.room.id = :roomId AND " +
            "ft.dayOfWeek = :dayOfWeek AND ft.isActive = true ORDER BY ft.startTime ASC")

@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react'
+import React, { useEffect, useMemo, useState } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import { useAuth } from '../lib/AuthContext'
 import NotificationBell from './notifications/NotificationBell'
@@ -8,11 +8,12 @@ import Container from './Container'
 import Button from './Button'
 
 export default function Layout({ children }) {
-  const { user, logout, hasRole } = useAuth()
+  const { user, logout, hasRole, requestedRole, isApproved } = useAuth()
   const location = useLocation()
   const [mobileOpen, setMobileOpen] = useState(false)
   const [notificationsOpen, setNotificationsOpen] = useState(false)
   const [broadcastOpen, setBroadcastOpen] = useState(false)
+  const [showPendingCard, setShowPendingCard] = useState(false)
   
   const isActive = (path) => location.pathname === path
 
@@ -22,11 +23,26 @@ export default function Layout({ children }) {
       { to: '/dashboard', label: 'Dashboard', show: !!user },
       { to: '/events', label: 'Events', show: true },
       { to: '/book-room', label: 'Book Room', show: !!user && (hasRole('ADMIN') || hasRole('BUILDING_ADMIN') || hasRole('CENTRAL_ADMIN') || hasRole('FACULTY') || hasRole('CLUB_ASSOCIATE')) },
-      { to: '/admin/role-requests', label: 'Admin', show: !!user && (hasRole('ADMIN') || hasRole('CENTRAL_ADMIN')) },
-      { to: '/admin/room-approvals', label: 'Room Approvals', show: !!user && (hasRole('ADMIN') || hasRole('BUILDING_ADMIN') || hasRole('CENTRAL_ADMIN')) },
+      { to: '/admin/role-requests', label: 'Role Approval', show: !!user && (hasRole('ADMIN') || hasRole('CENTRAL_ADMIN')) },
+      { to: '/admin/room-approvals', label: 'Room Approvals', show: !!user && (hasRole('ADMIN') || hasRole('BUILDING_ADMIN')) },
     ]
     return items.filter(i => i.show)
   }, [user, hasRole])
+
+  const hasPendingRoleApproval = !!user
+    && (hasRole('GENERAL_USER') || hasRole('USER'))
+    && !!requestedRole
+    && !isApproved
+
+  useEffect(() => {
+    setShowPendingCard(hasPendingRoleApproval)
+  }, [hasPendingRoleApproval, user?.sub])
+
+  useEffect(() => {
+    if (!showPendingCard) return
+    const t = setTimeout(() => setShowPendingCard(false), 5000)
+    return () => clearTimeout(t)
+  }, [showPendingCard])
   
   return (
     <div className="min-h-screen bg-[#0B0F19] text-[#E5E7EB]">
@@ -71,7 +87,7 @@ export default function Layout({ children }) {
               >
                 Menu
               </Button>
-              {hasRole('ADMIN') && (
+              {hasRole('CENTRAL_ADMIN') && (
                 <Button
                   variant="primary"
                   size="sm"
@@ -145,6 +161,14 @@ export default function Layout({ children }) {
         )}
         
       </header>
+
+      {showPendingCard && (
+        <div className="fixed right-5 top-[80px] z-[9999] w-[min(360px,calc(100vw-2.5rem))] rounded-[10px] border border-yellow-500/30 bg-[#1E293B] px-4 py-3 text-sm text-yellow-300 shadow-[0_5px_20px_rgba(0,0,0,0.4)]">
+          Logged in as General User.
+          <br />
+          Waiting for Role Approval.
+        </div>
+      )}
       
       {/* Main Content */}
       <main>

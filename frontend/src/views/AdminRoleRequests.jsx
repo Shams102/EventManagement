@@ -39,11 +39,11 @@ export default function AdminRoleRequests() {
   if (!hasRole('ADMIN') && !hasRole('CENTRAL_ADMIN')) return null
 
   return (
-    <div>
+    <div className="w-full max-w-5xl mx-auto flex flex-col">
       <div className="mb-8 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-slate-900">Role Requests</h1>
-          <p className="text-slate-600">Approve or reject requested roles.</p>
+          <h1 className="text-2xl sm:text-3xl font-bold text-[#E5E7EB] tracking-tight">Role Approval</h1>
+          <p className="text-sm sm:text-base text-[#9CA3AF]">Review and approve or reject user role upgrade requests.</p>
         </div>
         <button type="button" className="btn btn-secondary" onClick={load} disabled={loading}>Refresh</button>
       </div>
@@ -54,37 +54,37 @@ export default function AdminRoleRequests() {
       {loading ? (
         <div className="card text-center py-12">
           <div className="spinner mx-auto mb-4"></div>
-          <div className="text-slate-600">Loading requests...</div>
+          <div className="text-[#9CA3AF]">Loading requests...</div>
         </div>
       ) : rows.length === 0 ? (
         <div className="card text-center py-12">
           <div className="text-4xl mb-4">🧾</div>
-          <div className="text-lg font-semibold text-slate-900">No pending requests</div>
-          <div className="text-slate-600 mt-1">New role upgrade requests will appear here.</div>
+          <div className="text-lg font-semibold text-[#E5E7EB]">No pending requests</div>
+          <div className="text-[#9CA3AF] mt-1">New role upgrade requests will appear here.</div>
         </div>
       ) : (
         <div className="card p-0 overflow-hidden">
-          <div className="px-6 py-4 border-b border-slate-200 bg-gradient-to-br from-blue-50 to-white">
-            <div className="text-sm font-semibold text-slate-900">Pending requests</div>
-            <div className="text-sm text-slate-600">{rows.length} waiting for review</div>
+          <div className="px-6 py-4 border-b border-[#1F2937] bg-gradient-to-b from-[#111827] to-[#0F172A]">
+            <div className="text-sm font-semibold text-[#E5E7EB]">Pending requests</div>
+            <div className="text-sm text-[#9CA3AF]">{rows.length} waiting for review</div>
           </div>
           <div className="overflow-x-auto">
             <table className="min-w-full">
-              <thead className="bg-slate-50 text-left">
+              <thead className="bg-[#0F172A] text-left">
                 <tr>
-                  <th className="px-6 py-3 text-xs font-semibold text-slate-600">Username</th>
-                  <th className="px-6 py-3 text-xs font-semibold text-slate-600">Email</th>
-                  <th className="px-6 py-3 text-xs font-semibold text-slate-600">Requested Role</th>
-                  <th className="px-6 py-3 text-xs font-semibold text-slate-600">Actions</th>
+                  <th className="px-6 py-3 text-xs font-semibold text-[#9CA3AF]">Username</th>
+                  <th className="px-6 py-3 text-xs font-semibold text-[#9CA3AF]">Email</th>
+                  <th className="px-6 py-3 text-xs font-semibold text-[#9CA3AF]">Requested Role</th>
+                  <th className="px-6 py-3 text-xs font-semibold text-[#9CA3AF]">Actions</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-200">
+              <tbody className="divide-y divide-[#1F2937]">
                 {rows.map(r => (
-                  <tr key={r.id} className="hover:bg-slate-50/70">
-                    <td className="px-6 py-4 text-sm font-medium text-slate-900">{r.username}</td>
-                    <td className="px-6 py-4 text-sm text-slate-600">{r.email}</td>
+                  <tr key={r.id} className="hover:bg-[#0F172A]">
+                    <td className="px-6 py-4 text-sm font-medium text-[#E5E7EB]">{r.username}</td>
+                    <td className="px-6 py-4 text-sm text-[#9CA3AF]">{r.email}</td>
                     <td className="px-6 py-4">
-                      <span className="inline-flex items-center rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-semibold text-slate-700">
+                      <span className="inline-flex items-center rounded-full border border-[#1F2937] bg-[#111827] px-3 py-1 text-xs font-semibold text-[#C4B5FD]">
                         {r.requestedRole}
                       </span>
                     </td>

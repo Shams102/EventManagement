@@ -17,6 +17,26 @@ function roomMatchesApprovalScope(roomType, approvalScope) {
   return true
 }
 
+function formatDateOnly(value) {
+  if (!value) return 'N/A'
+  const d = new Date(value)
+  return Number.isNaN(d.getTime()) ? String(value) : d.toLocaleDateString()
+}
+
+function formatTimeOnly(value) {
+  if (!value) return 'N/A'
+  const d = new Date(value)
+  return Number.isNaN(d.getTime())
+    ? String(value)
+    : d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+}
+
+function formatDateTime(value) {
+  if (!value) return 'N/A'
+  const d = new Date(value)
+  return Number.isNaN(d.getTime()) ? String(value) : d.toLocaleString()
+}
+
 export default function AdminRoomApprovals() {
   const { hasRole } = useAuth()
   const [requests, setRequests] = useState([])
@@ -70,15 +90,9 @@ export default function AdminRoomApprovals() {
 
   const reject = async (id) => {
     setError('')
-    const req = requests.find(r => r.id === id)
-    const group = req?.splitGroupId
     try {
       await api.post(`/api/admin/room-requests/${id}/reject`)
-      setRequests(prev => prev.filter(r => {
-        if (r.id === id) return false
-        if (group && r.splitGroupId === group) return false
-        return true
-      }))
+      setRequests(prev => prev.filter(r => r.id !== id))
     } catch (e) {
       setError('Reject failed')
     }
@@ -239,7 +253,7 @@ function ApprovalItem({ req, rooms, onApprove, onReject, hasRole }) {
               Split approval: approving this row rejects other pending parts in the same group ({String(req.splitGroupId).slice(0, 8)}…).
             </div>
           )}
-          <div className="mt-1 text-sm text-[#9CA3AF]">Starts: {new Date(req.start).toLocaleString()}</div>
+          <div className="mt-1 text-sm text-[#9CA3AF]">Starts: {formatDateTime(req.start)}</div>
           
           {req.timingModel && req.timingModel !== 'SINGLE_DAY' && (
             <div className="mt-2 mb-2 p-3 bg-[#0F172A] border border-[#1F2937] rounded-lg">
@@ -252,9 +266,9 @@ function ApprovalItem({ req, rooms, onApprove, onReject, hasRole }) {
                 <div className="space-y-1 mt-2 border-t border-[#1F2937] pt-2 max-h-32 overflow-y-auto pr-2 custom-scrollbar">
                   {req.slots.map((slot, idx) => (
                     <div key={idx} className="flex justify-between text-xs text-[#9CA3AF]">
-                      <span>Day {idx + 1}: <span className="text-[#E5E7EB]">{new Date(slot.start).toLocaleDateString()}</span></span>
+                      <span>Day {idx + 1}: <span className="text-[#E5E7EB]">{formatDateOnly(slot.slotStart)}</span></span>
                       <span className="text-[#E5E7EB]">
-                        {new Date(slot.start).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})} - {new Date(slot.end).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
+                        {formatTimeOnly(slot.slotStart)} - {formatTimeOnly(slot.slotEnd)}
                       </span>
                     </div>
                   ))}
@@ -294,7 +308,12 @@ function ApprovalItem({ req, rooms, onApprove, onReject, hasRole }) {
                   <ul className="list-disc pl-5 space-y-1 text-rose-400">
                     {Object.entries(conflicts).map(([pref, issues]) => (
                       <li key={pref}>
-                        <strong className="text-[#E5E7EB]">Room {pref}:</strong>{' '}
+                        <strong className="text-[#E5E7EB]">
+                          Room {String(req.pref1Id) === String(pref) ? req.pref1
+                            : String(req.pref2Id) === String(pref) ? req.pref2
+                            : String(req.pref3Id) === String(pref) ? req.pref3
+                            : pref}:
+                        </strong>{' '}
                         {issues.length === 0 ? <span className="text-emerald-400">Clear</span> : issues.join(', ')}
                       </li>
                     ))}

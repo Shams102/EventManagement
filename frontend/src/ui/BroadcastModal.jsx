@@ -16,15 +16,13 @@ export default function BroadcastModal({ open, onClose }) {
 
   if (!open) return null
   return (
-    <div className="fixed inset-0 z-[1200] flex items-center justify-center bg-black/60 backdrop-blur-sm transition-all duration-200 ease-out">
-      <div className="w-full max-w-xl p-4">
-        <div ref={cardRef} className="card">
-          <div className="flex items-center justify-between mb-4">
-            <div className="text-lg font-semibold">Send Global Broadcast</div>
-            <button className="btn btn-ghost" onClick={onClose} aria-label="Close broadcast dialog">✕</button>
-          </div>
-          <BroadcastForm onSent={onClose} />
+    <div className="fixed right-5 top-[70px] z-[9999] w-[min(350px,calc(100vw-2.5rem))]">
+      <div ref={cardRef} className="card border border-[#1E293B] bg-[#0F172A] shadow-[0_10px_30px_rgba(0,0,0,0.5)]">
+        <div className="mb-4 flex items-center justify-between">
+          <div className="text-base font-semibold text-[#E5E7EB]">Send Global Broadcast</div>
+          <button className="btn btn-ghost btn-sm" onClick={onClose} aria-label="Close broadcast dialog">✕</button>
         </div>
+        <BroadcastForm onSent={onClose} />
       </div>
     </div>
   )

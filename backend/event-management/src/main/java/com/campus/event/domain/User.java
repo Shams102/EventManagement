@@ -11,6 +11,7 @@ import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.Table;
+import jakarta.persistence.Column;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import lombok.Getter;
@@ -59,6 +60,9 @@ public class User {
     
     @Enumerated(EnumType.STRING)
     private Role requestedRole;
+
+    @Column(name = "active_session_token", length = 512)
+    private String activeSessionToken;
         // Explicit getters and setters
         public Long getId() { return id; }
         public void setId(Long id) { this.id = id; }
@@ -74,6 +78,8 @@ public class User {
         public void setRoles(Set<Role> roles) { this.roles = roles; }
         public Role getRequestedRole() { return requestedRole; }
         public void setRequestedRole(Role requestedRole) { this.requestedRole = requestedRole; }
+        public String getActiveSessionToken() { return activeSessionToken; }
+        public void setActiveSessionToken(String activeSessionToken) { this.activeSessionToken = activeSessionToken; }
         public String getClubId() { return clubId; }
         public void setClubId(String clubId) { this.clubId = clubId; }
         public String getFullName() { return fullName; }

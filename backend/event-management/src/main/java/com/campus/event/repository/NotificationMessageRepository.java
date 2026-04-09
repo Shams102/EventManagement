@@ -9,4 +9,6 @@ public interface NotificationMessageRepository extends JpaRepository<Notificatio
     List<NotificationMessage> findByOriginOrderByCreatedAtDesc(com.campus.event.domain.NotificationOrigin origin);
 
     List<NotificationMessage> findByEvent_IdOrderByCreatedAtDesc(Long eventId);
+
+    void deleteByEvent_Id(Long eventId);
 }

@@ -45,7 +45,7 @@ function AppRoutes() {
         <Route path="/enhanced-book-room" element={<ProtectedRoute roles={['FACULTY','CLUB_ASSOCIATE','ADMIN','CENTRAL_ADMIN','BUILDING_ADMIN']}><RoomBooking /></ProtectedRoute>} />
         <Route path="/admin/role-requests" element={<ProtectedRoute roles={['ADMIN', 'CENTRAL_ADMIN']}><AdminRoleRequests /></ProtectedRoute>} />
         <Route path="/admin/room-approvals" element={<ProtectedRoute roles={['ADMIN', 'BUILDING_ADMIN']}><AdminRoomApprovals /></ProtectedRoute>} />
-        <Route path="/admin/notifications" element={<ProtectedRoute roles={[ 'ADMIN' ]}><AdminBroadcast /></ProtectedRoute>} />
+        <Route path="/admin/notifications" element={<ProtectedRoute roles={['CENTRAL_ADMIN']}><AdminBroadcast /></ProtectedRoute>} />
         <Route path="/notifications" element={<ProtectedRoute><NotificationsPage /></ProtectedRoute>} />
         <Route path="/notifications/threads/:threadId" element={<ProtectedRoute><ThreadChatPage /></ProtectedRoute>} />
         <Route path="/forgot-password" element={<ForgotPassword />} />

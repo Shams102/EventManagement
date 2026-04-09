@@ -15,4 +15,6 @@ public interface NotificationDeliveryRepository extends JpaRepository<Notificati
 
     @Query("select d from NotificationDelivery d join fetch d.notification n left join fetch n.event where d.user.username = ?1 order by d.createdAt desc")
     List<NotificationDelivery> findInboxByUsernameWithNotification(String username);
+
+    void deleteByNotification_Event_Id(Long eventId);
 }

@@ -4,6 +4,7 @@ import com.campus.event.domain.AdminScope;
 import com.campus.event.domain.Building;
 import com.campus.event.domain.BuildingTimetable;
 import com.campus.event.domain.Event;
+import com.campus.event.domain.FixedTimetable;
 import com.campus.event.domain.Floor;
 import com.campus.event.domain.Role;
 import com.campus.event.domain.Room;
@@ -12,6 +13,7 @@ import com.campus.event.domain.User;
 import com.campus.event.repository.BuildingRepository;
 import com.campus.event.repository.BuildingTimetableRepository;
 import com.campus.event.repository.EventRepository;
+import com.campus.event.repository.FixedTimetableRepository;
 import com.campus.event.repository.FloorRepository;
 import com.campus.event.repository.RoomRepository;
 import com.campus.event.repository.UserRepository;
@@ -25,6 +27,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import java.time.DayOfWeek;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
+import java.util.Random;
 import java.util.Set;
 
 @Configuration
@@ -35,6 +38,7 @@ public class DataInitializer {
     @Bean
     CommandLineRunner seedData(UserRepository users, EventRepository events,
                                BuildingRepository buildings, BuildingTimetableRepository timetables,
+                               FixedTimetableRepository fixedTimetables,
                                FloorRepository floors, RoomRepository rooms,
                                PasswordEncoder encoder) {
         return args -> {
@@ -65,6 +69,7 @@ public class DataInitializer {
             // ── Floors + Rooms (idempotent) ──
             buildings.findByCode("BLD_A").ifPresent(b -> ensureFloorsAndRoomsExist(b, floors, rooms, true));
             buildings.findByCode("BLD_B").ifPresent(b -> ensureFloorsAndRoomsExist(b, floors, rooms, false));
+            buildings.findByCode("BLD_A").ifPresent(b -> seedBuildingAFixedTimetableIfMissing(b, rooms, fixedTimetables));
 
             // ── Admin users ──
             syncBuildingAdmin(buildings, users, "ab1_admin", "BLD_A", AdminScope.LARGE_HALL);
@@ -303,5 +308,43 @@ public class DataInitializer {
             users.save(u);
             log.info("Seeded user {} for building {}", username, buildingCode);
         });
+    }
+
+    private static void seedBuildingAFixedTimetableIfMissing(Building building,
+                                                             RoomRepository rooms,
+                                                             FixedTimetableRepository fixedTimetables) {
+        final Random random = new Random(42L);
+        final String academicYear = String.valueOf(LocalDateTime.now().getYear());
+        final LocalTime[][] windows = new LocalTime[][]{
+                {LocalTime.of(9, 0), LocalTime.of(11, 0)},
+                {LocalTime.of(11, 0), LocalTime.of(13, 0)},
+                {LocalTime.of(14, 0), LocalTime.of(16, 0)}
+        };
+
+        for (Room room : rooms.findByBuildingIdAndIsActiveTrue(building.getId())) {
+
+            for (DayOfWeek day : DayOfWeek.values()) {
+                if (day == DayOfWeek.SATURDAY || day == DayOfWeek.SUNDAY) continue;
+                if (!fixedTimetables.findByRoomIdAndDayOfWeekOrderByStartTimeAsc(room.getId(), day).isEmpty()) {
+                    continue;
+                }
+                for (int i = 0; i < windows.length; i++) {
+                    if (!random.nextBoolean()) continue;
+                    FixedTimetable ft = new FixedTimetable();
+                    ft.setRoom(room);
+                    ft.setCourseName("BLOCKED_SLOT");
+                    ft.setCourseCode("BLD-A-FIXED-" + (i + 1));
+                    ft.setSection("AUTO");
+                    ft.setSemester("AUTO");
+                    ft.setBatch("AUTO");
+                    ft.setDayOfWeek(day);
+                    ft.setStartTime(windows[i][0]);
+                    ft.setEndTime(windows[i][1]);
+                    ft.setAcademicYear(academicYear);
+                    ft.setActive(true);
+                    fixedTimetables.save(ft);
+                }
+            }
+        }
     }
 }

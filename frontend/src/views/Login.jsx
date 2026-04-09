@@ -48,7 +48,13 @@ export default function Login() {
       }
     } catch (err) {
       if (err.response) {
-        if (err.response.status === 401) setError('Invalid password. Please try again.')
+        const data = err.response?.data
+        const detail = (data && (data.error || data.message))
+          ? (data.error || data.message)
+          : (typeof data === 'string' ? data : '')
+        if (err.response.status === 401 && /another device/i.test(String(detail))) {
+          setError('Already logged in from another device.')
+        } else if (err.response.status === 401) setError('Invalid password. Please try again.')
         else if (err.response.status === 404) setError('User not found.')
         else setError('Login failed. Please try again.')
       } else {

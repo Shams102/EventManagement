@@ -9,7 +9,12 @@ import com.campus.event.domain.User;
 import com.campus.event.repository.EventRegistrationRepository;
 import com.campus.event.repository.EventRepository;
 import com.campus.event.repository.EventTimeSlotRepository;
+import com.campus.event.repository.NotificationDeliveryRepository;
+import com.campus.event.repository.NotificationMessageRepository;
+import com.campus.event.repository.NotificationThreadRepository;
 import com.campus.event.repository.RegistrationRepository;
+import com.campus.event.repository.RoomBookingRequestRepository;
+import com.campus.event.repository.ThreadMessageRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -18,6 +23,7 @@ import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
 
 @Service
 public class EventService {
@@ -27,17 +33,32 @@ public class EventService {
     private final RegistrationRepository registrationRepository;
     private final EventTimeSlotRepository eventTimeSlotRepository;
     private final NotificationService notificationService;
+    private final RoomBookingRequestRepository roomBookingRequestRepository;
+    private final ThreadMessageRepository threadMessageRepository;
+    private final NotificationThreadRepository notificationThreadRepository;
+    private final NotificationDeliveryRepository notificationDeliveryRepository;
+    private final NotificationMessageRepository notificationMessageRepository;
 
     public EventService(EventRepository eventRepository,
                         EventRegistrationRepository eventRegistrationRepository,
                         RegistrationRepository registrationRepository,
                         EventTimeSlotRepository eventTimeSlotRepository,
-                        NotificationService notificationService) {
+                        NotificationService notificationService,
+                        RoomBookingRequestRepository roomBookingRequestRepository,
+                        ThreadMessageRepository threadMessageRepository,
+                        NotificationThreadRepository notificationThreadRepository,
+                        NotificationDeliveryRepository notificationDeliveryRepository,
+                        NotificationMessageRepository notificationMessageRepository) {
         this.eventRepository = eventRepository;
         this.eventRegistrationRepository = eventRegistrationRepository;
         this.registrationRepository = registrationRepository;
         this.eventTimeSlotRepository = eventTimeSlotRepository;
         this.notificationService = notificationService;
+        this.roomBookingRequestRepository = roomBookingRequestRepository;
+        this.threadMessageRepository = threadMessageRepository;
+        this.notificationThreadRepository = notificationThreadRepository;
+        this.notificationDeliveryRepository = notificationDeliveryRepository;
+        this.notificationMessageRepository = notificationMessageRepository;
     }
 
     public List<Event> getPublicEvents() {
@@ -171,6 +192,16 @@ public class EventService {
             throw new SecurityException("Only the event creator can cancel this event");
         }
 
+        boolean hasAllocatedRoom = roomBookingRequestRepository.existsByEvent_IdAndStatusIn(
+                eventId, Set.of(com.campus.event.domain.RoomBookingStatus.APPROVED, com.campus.event.domain.RoomBookingStatus.CONFIRMED));
+        if (hasAllocatedRoom) {
+            throw new IllegalStateException("Cannot cancel event: Room already allocated.");
+        }
+
+        if (event.getStartTime() != null && event.getStartTime().isBefore(LocalDateTime.now().plusDays(2))) {
+            throw new IllegalStateException("Cannot cancel event: Less than 2 days remaining.");
+        }
+
         // Notify registered users about cancellation before deleting
         List<EventRegistration> regs = eventRegistrationRepository.findByEvent_Id(eventId);
         if (!regs.isEmpty()) {
@@ -185,9 +216,16 @@ public class EventService {
         }
 
         // Delete related records
+        roomBookingRequestRepository.deleteByEvent_Id(eventId);
         eventTimeSlotRepository.deleteByEvent_Id(eventId);
         eventRegistrationRepository.deleteByEvent_Id(eventId);
         registrationRepository.deleteByEvent_Id(eventId);
+        threadMessageRepository.deleteByThread_Event_Id(eventId);
+        threadMessageRepository.deleteByThread_Notification_Event_Id(eventId);
+        notificationThreadRepository.deleteByEvent_Id(eventId);
+        notificationThreadRepository.deleteByNotification_Event_Id(eventId);
+        notificationDeliveryRepository.deleteByNotification_Event_Id(eventId);
+        notificationMessageRepository.deleteByEvent_Id(eventId);
 
         // Delete the event
         eventRepository.delete(event);

@@ -51,27 +51,27 @@ export default function ThreadChatPage() {
     <div className="max-w-3xl mx-auto">
       <div className="mb-4 flex items-center justify-between">
         <button className="btn btn-secondary btn-sm" onClick={() => navigate('/notifications')}>← Back</button>
-        <div className="text-sm text-slate-500">Thread #{threadId}</div>
+        <div className="text-sm text-[#9CA3AF]">Thread #{threadId}</div>
       </div>
 
       <div className="card p-0 overflow-hidden">
-        <div className="border-b p-4 bg-white/70">
-          <div className="font-semibold">Discussion</div>
-          <div className="text-xs text-slate-500">Ask a question and get replies here.</div>
+        <div className="border-b border-[#1F2937] p-4 bg-[#0F172A]">
+          <div className="font-semibold text-[#E5E7EB]">Discussion</div>
+          <div className="text-xs text-[#9CA3AF]">Ask a question and get replies here.</div>
         </div>
 
-        <div className="p-4 bg-slate-50" style={{ minHeight: 420, maxHeight: 560, overflowY: 'auto' }}>
+        <div className="p-4 bg-[#111827]" style={{ minHeight: 420, maxHeight: 560, overflowY: 'auto' }}>
           {loading ? (
-            <div className="text-sm text-slate-600">Loading messages...</div>
+            <div className="text-sm text-[#9CA3AF]">Loading messages...</div>
           ) : messages.length === 0 ? (
-            <div className="text-sm text-slate-600">No messages yet. Start the conversation.</div>
+            <div className="text-sm text-[#9CA3AF]">No messages yet. Start the conversation.</div>
           ) : (
             <div className="space-y-3">
               {messages.map(m => (
                 <div key={m.id} className="flex">
-                  <div className="max-w-[85%] rounded-2xl border border-slate-200 bg-white px-3 py-2 shadow-sm">
-                    <div className="text-xs text-slate-500">{m.author} • {new Date(m.createdAt).toLocaleString()}</div>
-                    <div className="text-sm text-slate-800 whitespace-pre-line mt-1">{m.content}</div>
+                  <div className="max-w-[85%] rounded-2xl border border-[#1F2937] bg-[#0F172A] px-3 py-2 shadow-sm">
+                    <div className="text-xs text-[#9CA3AF]">{m.author} • {new Date(m.createdAt).toLocaleString()}</div>
+                    <div className="text-sm text-[#E5E7EB] whitespace-pre-line mt-1">{m.content}</div>
                   </div>
                 </div>
               ))}
@@ -80,7 +80,7 @@ export default function ThreadChatPage() {
           )}
         </div>
 
-        <div className="border-t p-3 bg-white">
+        <div className="border-t border-[#1F2937] p-3 bg-[#0F172A]">
           <div className="flex gap-2">
             <input
               className="form-input flex-1"
@@ -100,7 +100,7 @@ export default function ThreadChatPage() {
               {sending ? 'Sending...' : 'Send'}
             </button>
           </div>
-          <div className="mt-2 text-xs text-slate-500">Press Enter to send.</div>
+          <div className="mt-2 text-xs text-[#9CA3AF]">Press Enter to send.</div>
         </div>
       </div>
     </div>

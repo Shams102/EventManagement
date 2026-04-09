@@ -10,7 +10,7 @@ export default function Register() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [confirm, setConfirm] = useState('')
-  const [role, setRole] = useState('GENERAL_USER')
+  const [role, setRole] = useState('USER')
   const [error, setError] = useState('')
   const [message, setMessage] = useState('')
   const [loading, setLoading] = useState(false)
@@ -39,7 +39,7 @@ export default function Register() {
         const msg = typeof res.data === 'string' ? res.data : 'Registration successful. You can now sign in.'
         setMessage(msg)
         showToast({ message: 'Registration successful', type: 'success' })
-        if (role === 'GENERAL_USER') {
+        if (role === 'USER') {
           setTimeout(() => navigate('/login'), 800)
         }
       } else {
@@ -72,13 +72,12 @@ export default function Register() {
             <div className="form-group">
               <label className="form-label">Role</label>
               <select className="form-select" value={role} onChange={(e)=>setRole(e.target.value)}>
-                <option value="GENERAL_USER">General User</option>
+                <option value="USER">User</option>
                 <option value="FACULTY">Faculty</option>
                 <option value="CLUB_ASSOCIATE">Club Associate</option>
-                <option value="ADMIN">Admin</option>
               </select>
               <div className="mt-2 text-xs text-[#9CA3AF]">
-                General users can register for events. Faculty/Club/Admin roles require approval.
+                Users can register instantly. Faculty and Club Associate roles require approval.
               </div>
             </div>
           <div className="form-group">

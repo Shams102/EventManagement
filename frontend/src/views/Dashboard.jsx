@@ -19,6 +19,7 @@ export default function Dashboard() {
   const isGeneralLike = hasRole('GENERAL_USER') || hasRole('CLUB_ASSOCIATE')
   const isCreatorRole = hasRole('ADMIN') || hasRole('BUILDING_ADMIN') || hasRole('CENTRAL_ADMIN') || hasRole('FACULTY') || hasRole('CLUB_ASSOCIATE')
   const isAdminRole = hasRole('ADMIN') || hasRole('BUILDING_ADMIN') || hasRole('CENTRAL_ADMIN')
+  const isRoomApprovalAdmin = hasRole('ADMIN') || hasRole('BUILDING_ADMIN')
 
   useEffect(() => {
     const calls = []
@@ -39,7 +40,7 @@ export default function Dashboard() {
       calls.push(Promise.resolve({ key: 'bookings', data: [] }))
     }
 
-    if (isAdminRole) {
+    if (isRoomApprovalAdmin) {
       calls.push(api.get('/api/admin/room-requests?status=PENDING').catch(() => ({ key: 'pending', data: [] })))
     } else {
       calls.push(Promise.resolve({ key: 'pending', data: [] }))
@@ -65,7 +66,7 @@ export default function Dashboard() {
       setBookings(bookingsRes.data || [])
       setPendingApprovals(pendingRes?.data || [])
     }).finally(() => setLoading(false))
-  }, [isGeneralLike, isCreatorRole, isAdminRole])
+  }, [isGeneralLike, isCreatorRole, isRoomApprovalAdmin])
 
   const now = new Date()
   const upcomingRegs = registrations.filter(e => e.startTime && new Date(e.endTime) >= now)
@@ -87,7 +88,9 @@ export default function Dashboard() {
       setCreatedEvents(prev => prev.filter(ev => ev.id !== eventId))
       showToast({ message: 'Event cancelled successfully', type: 'success' })
     } catch (err) {
-      const msg = err.response?.data || 'Failed to cancel event'
+      const data = err.response?.data
+      const msg = (data && (data.error || data.message)) ? (data.error || data.message)
+        : (typeof data === 'string' ? data : 'Failed to cancel event')
       showToast({ message: msg, type: 'error' })
     } finally {
       setCancellingId(null)
@@ -97,7 +100,7 @@ export default function Dashboard() {
 
   const showRegistered = isGeneralLike
   const showCreatorPanels = isCreatorRole
-  const showAdminPanels = isAdminRole
+  const showAdminPanels = isRoomApprovalAdmin
   const mainGridClass = (showRegistered && showCreatorPanels)
     ? 'grid grid-cols-1 lg:grid-cols-2 gap-6'
     : 'grid grid-cols-1 gap-6'
@@ -114,7 +117,7 @@ export default function Dashboard() {
           {isCreatorRole && (
             <button type="button" className="btn btn-primary btn-sm" onClick={() => navigate('/book-room')}>Book Room</button>
           )}
-          {(hasRole('ADMIN') || hasRole('CENTRAL_ADMIN')) && (
+          {hasRole('CENTRAL_ADMIN') && (
             <button type="button" className="btn btn-secondary btn-sm" onClick={() => navigate('/admin/notifications')}>Broadcast</button>
           )}
         </div>
@@ -255,8 +258,10 @@ export default function Dashboard() {
               <div className="space-y-4">
                 {createdEvents.map(ev => {
                   const start = ev.startTime ? new Date(ev.startTime) : null
+                  const hasApprovedBooking = !!ev.hasApprovedBooking
                   const editable = start && (start.getTime() - now.getTime()) > 2 * 24 * 60 * 60 * 1000
                   const hasStarted = start && start.getTime() <= now.getTime()
+                  const canCancelEvent = !hasApprovedBooking && !!editable
                   const isCancelling = cancellingId === ev.id
                   const isConfirming = confirmId === ev.id
                   return (
@@ -273,7 +278,7 @@ export default function Dashboard() {
                           </div>
                         </div>
                         <span className="text-xs px-2 py-1 rounded-full bg-slate-800 text-gray-700">
-                          {editable ? 'Editable' : 'Locked (<2 days)'}
+                          {hasApprovedBooking ? 'Room Allocated' : editable ? 'Editable' : 'Locked (<2 days)'}
                         </span>
                       </div>
                     <div className="text-xs text-gray-500 mt-1">
@@ -333,18 +338,18 @@ export default function Dashboard() {
                             type="button"
                             className="btn btn-sm"
                             style={{
-                              background: hasStarted ? '#374151' : '#7F1D1D',
-                              color: hasStarted ? '#6B7280' : '#FECACA',
+                              background: !canCancelEvent || hasStarted ? '#374151' : '#7F1D1D',
+                              color: !canCancelEvent || hasStarted ? '#6B7280' : '#FECACA',
                               borderRadius: '8px',
                               padding: '6px 12px',
-                              cursor: hasStarted ? 'not-allowed' : 'pointer',
-                              opacity: hasStarted ? 0.6 : 1,
+                              cursor: !canCancelEvent || hasStarted ? 'not-allowed' : 'pointer',
+                              opacity: !canCancelEvent || hasStarted ? 0.6 : 1,
                               transition: 'all 0.2s ease',
                             }}
-                            disabled={hasStarted}
+                            disabled={!canCancelEvent || hasStarted}
                             onClick={() => setConfirmId(ev.id)}
-                            onMouseEnter={(e) => { if (!hasStarted) e.target.style.background = '#991B1B' }}
-                            onMouseLeave={(e) => { if (!hasStarted) e.target.style.background = '#7F1D1D' }}
+                            onMouseEnter={(e) => { if (canCancelEvent && !hasStarted) e.target.style.background = '#991B1B' }}
+                            onMouseLeave={(e) => { if (canCancelEvent && !hasStarted) e.target.style.background = '#7F1D1D' }}
                           >
                             Cancel Event
                           </button>

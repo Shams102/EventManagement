@@ -24,6 +24,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDateTime;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -111,7 +112,7 @@ public class AdminRoomBookingController {
             }
         }
         boolean any = false;
-        for (Room p : List.of(r.getPref1(), r.getPref2(), r.getPref3())) {
+        for (Room p : Arrays.asList(r.getPref1(), r.getPref2(), r.getPref3())) {
             if (p == null) {
                 continue;
             }
@@ -187,6 +188,9 @@ public class AdminRoomBookingController {
         m.put("pref1", r.getPref1() != null ? r.getPref1().getName() : null);
         m.put("pref2", r.getPref2() != null ? r.getPref2().getName() : null);
         m.put("pref3", r.getPref3() != null ? r.getPref3().getName() : null);
+        m.put("pref1Id", r.getPref1() != null ? r.getPref1().getId() : null);
+        m.put("pref2Id", r.getPref2() != null ? r.getPref2().getId() : null);
+        m.put("pref3Id", r.getPref3() != null ? r.getPref3().getId() : null);
         m.put("pref1RoomType", r.getPref1() != null && r.getPref1().getType() != null ? r.getPref1().getType().name() : null);
         m.put("approvalScope", r.getPref1() != null ? RoomApprovalRules.scopeForRoom(r.getPref1()).name() : null);
         m.put("allocatedRoom", r.getAllocatedRoom() != null ? r.getAllocatedRoom().getName() : null);
@@ -326,12 +330,8 @@ public class AdminRoomBookingController {
             }
         }
 
-        if (req.getSplitGroupId() != null) {
-            requestRepo.rejectSplitSiblingsBulk(req.getSplitGroupId(), -1L);
-        } else {
-            req.setStatus(RoomBookingStatus.REJECTED);
-            requestRepo.save(req);
-        }
+        req.setStatus(RoomBookingStatus.REJECTED);
+        requestRepo.save(req);
 
         if (req.getRequestedByUsername() != null) {
             userRepository.findByUsername(req.getRequestedByUsername()).ifPresent(u -> {
@@ -372,12 +372,26 @@ public class AdminRoomBookingController {
             return ResponseEntity.ok(Map.of());
         }
 
-        Map<String, List<String>> conflicts = scheduleService.validateEventRoomPreferences(
-                req.getPref1() != null ? req.getPref1().getId() : null,
-                req.getPref2() != null ? req.getPref2().getId() : null,
-                req.getPref3() != null ? req.getPref3().getId() : null,
-                start, end
-        );
+        List<EventTimeSlot> slots = req.getEvent() != null
+                ? eventTimeSlotRepository.findByEvent_IdOrderBySlotStartAsc(req.getEvent().getId())
+                : java.util.Collections.emptyList();
+
+        Map<String, List<String>> conflicts;
+        if (slots.size() > 1) {
+            conflicts = scheduleService.validateEventRoomPreferencesMultiSlot(
+                    req.getPref1() != null ? req.getPref1().getId() : null,
+                    req.getPref2() != null ? req.getPref2().getId() : null,
+                    req.getPref3() != null ? req.getPref3().getId() : null,
+                    slots
+            );
+        } else {
+            conflicts = scheduleService.validateEventRoomPreferences(
+                    req.getPref1() != null ? req.getPref1().getId() : null,
+                    req.getPref2() != null ? req.getPref2().getId() : null,
+                    req.getPref3() != null ? req.getPref3().getId() : null,
+                    start, end
+            );
+        }
         return ResponseEntity.ok(conflicts);
     }
 }

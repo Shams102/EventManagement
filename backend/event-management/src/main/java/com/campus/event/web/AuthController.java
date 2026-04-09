@@ -10,6 +10,8 @@ import jakarta.validation.Valid;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.HashMap;
@@ -57,6 +59,8 @@ public class AuthController {
                             claims.put("clubId", user.getClubId());
                         }
                         String token = jwtTokenService.generateToken(claims, userDetails);
+                        user.setActiveSessionToken(token);
+                        userRepository.save(user);
                         return ResponseEntity.ok(Map.<String, Object>of("token", token));
                     } else {
                         return ResponseEntity.status(401).body(Map.<String, Object>of("error", "Invalid password"));
@@ -66,6 +70,17 @@ public class AuthController {
                     log.debug("Login attempt user='{}' not found", uname);
                     return ResponseEntity.status(404).body(Map.<String, Object>of("error", "User not found"));
                 });
+    }
+
+    @PostMapping("/logout")
+    public ResponseEntity<?> logout(@AuthenticationPrincipal UserDetails principal) {
+        if (principal != null && principal.getUsername() != null) {
+            userRepository.findByUsername(principal.getUsername()).ifPresent(u -> {
+                u.setActiveSessionToken(null);
+                userRepository.save(u);
+            });
+        }
+        return ResponseEntity.ok(Map.of("message", "Logged out"));
     }
 
     @PostMapping("/register")
@@ -81,10 +96,19 @@ public class AuthController {
         user.setPasswordHash(passwordEncoder.encode(request.getPassword()));
         user.setEmail(request.getEmail());
         Role requested = null;
-        if (request.getRole() != null) {
+        if (request.getRole() != null && !request.getRole().isBlank()) {
+            String roleInput = request.getRole().trim().toUpperCase();
+            if ("USER".equals(roleInput)) {
+                roleInput = "GENERAL_USER";
+            }
             try {
-                requested = Role.valueOf(request.getRole().toUpperCase());
-            } catch (IllegalArgumentException ignored) {}
+                requested = Role.valueOf(roleInput);
+            } catch (IllegalArgumentException ignored) {
+                return ResponseEntity.badRequest().body(Map.of("error", "Invalid role. Allowed roles: USER, FACULTY, CLUB_ASSOCIATE"));
+            }
+            if (requested != Role.GENERAL_USER && requested != Role.FACULTY && requested != Role.CLUB_ASSOCIATE) {
+                return ResponseEntity.badRequest().body(Map.of("error", "Invalid role. Allowed roles: USER, FACULTY, CLUB_ASSOCIATE"));
+            }
         }
         // Always grant GENERAL_USER by default using a mutable set
         user.getRoles().add(Role.GENERAL_USER);

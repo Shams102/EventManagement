@@ -43,6 +43,12 @@ public interface RoomBookingRequestRepository extends JpaRepository<RoomBookingR
     List<RoomBookingRequest> findApprovedToConfirm(@Param("cutoff") LocalDateTime cutoff);
 
     List<RoomBookingRequest> findBySplitGroupId(UUID splitGroupId);
+
+    boolean existsByEvent_IdAndStatus(Long eventId, RoomBookingStatus status);
+
+    boolean existsByEvent_IdAndStatusIn(Long eventId, Set<RoomBookingStatus> statuses);
+
+    void deleteByEvent_Id(Long eventId);
     
     @Modifying
     @Query("UPDATE RoomBookingRequest r SET r.status = 'REJECTED' WHERE r.splitGroupId = :groupId AND r.id != :approvedId AND r.status = 'PENDING'")

@@ -1,18 +1,34 @@
 import React, { useEffect, useState } from 'react'
 import { fetchInbox } from '../../lib/api'
+import { useAuth } from '../../lib/AuthContext'
 
 export default function NotificationBell({ onOpen, open = false }) {
+  const { user } = useAuth()
   const [count, setCount] = useState(0)
 
   useEffect(() => {
+    if (!user) {
+      setCount(0)
+      return
+    }
     let mounted = true
-    fetchInbox().then(res => {
-      if (!mounted) return
-      const unread = (res.data || []).filter(n => !n.read).length
-      setCount(unread)
-    }).catch(() => {})
-    return () => { mounted = false }
-  }, [])
+    const refresh = () => {
+      fetchInbox().then(res => {
+        if (!mounted) return
+        const unread = (res.data || []).filter(n => !n.read).length
+        setCount(unread)
+      }).catch(() => {
+        if (mounted) setCount(0)
+      })
+    }
+    refresh()
+    const onUpdated = () => refresh()
+    window.addEventListener('notifications-updated', onUpdated)
+    return () => {
+      mounted = false
+      window.removeEventListener('notifications-updated', onUpdated)
+    }
+  }, [user, open])
 
   return (
     <button

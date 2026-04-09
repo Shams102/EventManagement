@@ -10,4 +10,8 @@ public interface NotificationThreadRepository extends JpaRepository<Notification
     List<NotificationThread> findByEvent_IdOrderByCreatedAtDesc(Long eventId);
 
     Optional<NotificationThread> findByNotification_Id(Long notificationId);
+
+    void deleteByEvent_Id(Long eventId);
+
+    void deleteByNotification_Event_Id(Long eventId);
 }

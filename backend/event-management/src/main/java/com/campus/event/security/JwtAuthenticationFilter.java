@@ -1,5 +1,7 @@
 package com.campus.event.security;
 
+import com.campus.event.domain.User;
+import com.campus.event.repository.UserRepository;
 import com.campus.event.service.CustomUserDetailsService;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
@@ -21,10 +23,12 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     private final JwtTokenService jwtTokenService;
     private final CustomUserDetailsService userDetailsService;
+    private final UserRepository userRepository;
 
-    public JwtAuthenticationFilter(JwtTokenService jwtTokenService, CustomUserDetailsService userDetailsService) {
+    public JwtAuthenticationFilter(JwtTokenService jwtTokenService, CustomUserDetailsService userDetailsService, UserRepository userRepository) {
         this.jwtTokenService = jwtTokenService;
         this.userDetailsService = userDetailsService;
+        this.userRepository = userRepository;
     }
 
     @Override
@@ -37,6 +41,14 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             try {
                 String username = jwtTokenService.extractUsername(jwt);
                 if (username != null && SecurityContextHolder.getContext().getAuthentication() == null) {
+                    User dbUser = userRepository.findByUsername(username).orElse(null);
+                    if (dbUser == null || dbUser.getActiveSessionToken() == null || !jwt.equals(dbUser.getActiveSessionToken())) {
+                        SecurityContextHolder.clearContext();
+                        response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+                        response.setContentType("application/json");
+                        response.getWriter().write("{\"error\":\"Already logged in on another device.\"}");
+                        return;
+                    }
                     UserDetails userDetails = userDetailsService.loadUserByUsername(username);
                     if (jwtTokenService.isTokenValid(jwt, userDetails)) {
                         UsernamePasswordAuthenticationToken authToken = new UsernamePasswordAuthenticationToken(

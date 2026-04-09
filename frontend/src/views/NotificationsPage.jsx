@@ -26,6 +26,20 @@ export default function NotificationsPage() {
     load()
   }, [])
 
+  useEffect(() => {
+    window.dispatchEvent(new Event('notifications-updated'))
+  }, [items])
+
+  useEffect(() => {
+    if (loading) return
+    const unread = (items || []).filter(i => !i.read)
+    if (unread.length === 0) return
+    Promise.all(unread.map(i => markDeliveryRead(i.deliveryId).catch(() => {}))).then(() => {
+      setItems(prev => prev.map(x => ({ ...x, read: true })))
+      window.dispatchEvent(new Event('notifications-updated'))
+    })
+  }, [loading])
+
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase()
     return (items || []).filter(n => {
@@ -78,8 +92,8 @@ export default function NotificationsPage() {
     <div className="max-w-3xl mx-auto">
       <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <h1 className="text-2xl font-semibold">Notifications</h1>
-          <div className="text-sm text-slate-600">Unread: {unreadCount}</div>
+          <h1 className="text-2xl font-semibold text-[#E5E7EB]">Notifications</h1>
+          <div className="text-sm text-[#9CA3AF]">Unread: {unreadCount}</div>
         </div>
         <div className="flex gap-2">
           <button className="btn btn-secondary btn-sm" onClick={load} disabled={loading}>Refresh</button>
@@ -87,6 +101,7 @@ export default function NotificationsPage() {
             const unread = (items || []).filter(i => !i.read)
             await Promise.all(unread.map(i => markDeliveryRead(i.deliveryId).catch(() => {})))
             setItems(prev => prev.map(x => ({ ...x, read: true })))
+            window.dispatchEvent(new Event('notifications-updated'))
           }} disabled={loading || unreadCount === 0}>Mark all read</button>
         </div>
       </div>
@@ -103,9 +118,9 @@ export default function NotificationsPage() {
       </div>
 
       {loading ? (
-        <div className="text-sm text-slate-600">Loading...</div>
+        <div className="text-sm text-[#9CA3AF]">Loading...</div>
       ) : filtered.length === 0 ? (
-        <div className="text-sm text-slate-600">No notifications</div>
+        <div className="text-sm text-[#9CA3AF]">No notifications</div>
       ) : (
         <div className="space-y-3">
           {filtered.map(item => (
@@ -113,14 +128,14 @@ export default function NotificationsPage() {
               <div className="flex items-start justify-between gap-4">
                 <div className="flex-1">
                   <div className="flex items-center gap-2">
-                    <div className="font-semibold text-slate-900">{item.title}</div>
-                    {!item.read && <span className="text-xs text-indigo-600">New</span>}
-                    {item.muted && <span className="text-xs text-slate-400">Muted</span>}
+                    <div className="font-semibold text-[#E5E7EB]">{item.title}</div>
+                    {!item.read && <span className="text-xs text-indigo-300">New</span>}
+                    {item.muted && <span className="text-xs text-[#9CA3AF]">Muted</span>}
                   </div>
-                  <div className="text-xs text-slate-500 mt-1">
+                  <div className="text-xs text-[#9CA3AF] mt-1">
                     {item.origin === 'EVENT' ? 'Event' : 'Global'} • {new Date(item.createdAt).toLocaleString()}
                   </div>
-                  <div className="text-sm text-slate-700 mt-2 whitespace-pre-line">{item.message}</div>
+                  <div className="text-sm text-[#D1D5DB] mt-2 whitespace-pre-line">{item.message}</div>
                 </div>
                 <div className="flex flex-col gap-2 items-end">
                   {item.threadEnabled && (

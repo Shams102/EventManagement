@@ -53,6 +53,7 @@ export const muteDelivery = (deliveryId, mute) => api.post(`/api/notifications/d
 export const createThread = (body) => api.post('/api/notifications/threads', body)
 export const fetchThreadMessages = (threadId) => api.get(`/api/notifications/threads/${threadId}/messages`)
 export const postThreadMessage = (threadId, body) => api.post(`/api/notifications/threads/${threadId}/messages`, body)
+export const logoutRequest = () => api.post('/api/auth/logout')
 
 export default api
 

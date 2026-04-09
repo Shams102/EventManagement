@@ -135,8 +135,25 @@ public class RoomBookingRequestController {
         }
 
         if (eventMode && event != null) {
-            if (!buildingTimetableService.isBookingWithinBuildingHours(req.buildingId, event.getStartTime(), event.getEndTime())) {
-                return ResponseEntity.badRequest().body("Event time is outside building operating hours");
+            if (requestRepo.existsByEvent_IdAndStatus(event.getId(), RoomBookingStatus.PENDING)) {
+                return ResponseEntity.badRequest().body("A room booking request is already pending for this event.");
+            }
+            // For multi-day events, validate each time slot individually against building hours
+            List<EventTimeSlot> slots = eventTimeSlotRepository.findByEvent_IdOrderBySlotStartAsc(event.getId());
+            if (slots.isEmpty()) {
+                // Legacy fallback: validate full range
+                if (!buildingTimetableService.isBookingWithinBuildingHours(req.buildingId, event.getStartTime(), event.getEndTime())) {
+                    return ResponseEntity.badRequest().body("Event time is outside building operating hours");
+                }
+            } else {
+                for (EventTimeSlot slot : slots) {
+                    if (!buildingTimetableService.isBookingWithinBuildingHours(req.buildingId, slot.getSlotStart(), slot.getSlotEnd())) {
+                        return ResponseEntity.badRequest().body(
+                            "Event time slot " + slot.getSlotStart().toLocalDate() + " (" +
+                            slot.getSlotStart().toLocalTime() + "–" + slot.getSlotEnd().toLocalTime() +
+                            ") is outside building operating hours");
+                    }
+                }
             }
         } else {
             if (!buildingTimetableService.isBookingWithinBuildingHours(req.buildingId, req.meetingStart, req.meetingEnd)) {

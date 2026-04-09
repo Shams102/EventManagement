@@ -6,8 +6,8 @@ export default function AdminBroadcast() {
     <div className="max-w-2xl mx-auto">
       <div className="mb-6 flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-semibold">Send Global Notification</h1>
-          <div className="text-sm text-slate-600">Broadcast a message to all users. Optionally enable a discussion thread for replies.</div>
+          <h1 className="text-2xl font-semibold text-[#E5E7EB]">Send Global Notification</h1>
+          <div className="text-sm text-[#9CA3AF]">Broadcast a message to all users. Optionally enable a discussion thread for replies.</div>
         </div>
       </div>
 

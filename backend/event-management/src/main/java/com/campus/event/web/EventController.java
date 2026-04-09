@@ -5,6 +5,7 @@ import com.campus.event.domain.Event;
 import com.campus.event.domain.User;
 import com.campus.event.repository.BuildingRepository;
 import com.campus.event.repository.EventRepository;
+import com.campus.event.repository.RoomBookingRequestRepository;
 import com.campus.event.repository.UserRepository;
 import com.campus.event.service.EventService;
 import com.campus.event.repository.EventRegistrationRepository;
@@ -19,6 +20,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Set;
 
 @RestController
 @RequestMapping("/api/events")
@@ -32,12 +34,14 @@ public class EventController {
     private final com.campus.event.service.BuildingTimetableService buildingTimetableService;
     private final EventRegistrationRepository registrationRepository;
     private final NotificationService notificationService;
+    private final RoomBookingRequestRepository roomBookingRequestRepository;
 
     public EventController(EventService eventService, UserRepository userRepository,
                            EventRepository eventRepository, BuildingRepository buildingRepository,
                            com.campus.event.service.BuildingTimetableService buildingTimetableService,
                            EventRegistrationRepository registrationRepository,
-                           NotificationService notificationService) {
+                           NotificationService notificationService,
+                           RoomBookingRequestRepository roomBookingRequestRepository) {
         this.eventService = eventService;
         this.userRepository = userRepository;
         this.eventRepository = eventRepository;
@@ -45,6 +49,7 @@ public class EventController {
         this.buildingTimetableService = buildingTimetableService;
         this.registrationRepository = registrationRepository;
         this.notificationService = notificationService;
+        this.roomBookingRequestRepository = roomBookingRequestRepository;
     }
 
     @PostMapping
@@ -109,15 +114,16 @@ public class EventController {
             }
         }
 
-        // Global limits & Continuous blocking logic
+        // Global limits
         long maximumDaysSpan = java.time.temporal.ChronoUnit.DAYS.between(request.getStart(), request.getEnd());
         if (maximumDaysSpan > 30) {
             return ResponseEntity.badRequest().body("Events cannot span more than 30 consecutive days.");
         }
 
+        // Building hours validation — strategy depends on timing model
         if (timingModel == com.campus.event.domain.EventTimingModel.MULTI_DAY_CONTINUOUS || timingModel == com.campus.event.domain.EventTimingModel.SINGLE_DAY) {
             if (!buildingTimetableService.isBookingWithinBuildingHours(building.getId(), request.getStart(), request.getEnd())) {
-                return ResponseEntity.badRequest().body("Continuous or Single Day logic illegally expands outside building operational hours. Please isolate specific times via the FLEXIBLE builder.");
+                return ResponseEntity.badRequest().body("Event time is outside building operating hours.");
             }
         }
 
@@ -125,11 +131,41 @@ public class EventController {
         if (timingModel == com.campus.event.domain.EventTimingModel.FLEXIBLE && (explicitSlots == null || explicitSlots.isEmpty())) {
             return ResponseEntity.badRequest().body("FLEXIBLE timing model requires specific time slots.");
         }
+
+        // FLEXIBLE: validate each explicit slot individually against building hours
+        if (timingModel == com.campus.event.domain.EventTimingModel.FLEXIBLE && explicitSlots != null) {
+            for (com.campus.event.domain.EventTimeSlot slot : explicitSlots) {
+                if (!buildingTimetableService.isBookingWithinBuildingHours(building.getId(), slot.getSlotStart(), slot.getSlotEnd())) {
+                    return ResponseEntity.badRequest().body(
+                        "Time slot " + slot.getSlotStart() + " – " + slot.getSlotEnd() + " is outside building operating hours.");
+                }
+            }
+        }
+
         if (timingModel == com.campus.event.domain.EventTimingModel.MULTI_DAY_FIXED) {
             java.time.LocalDate startDate = request.getStart().toLocalDate();
             java.time.LocalDate endDate = request.getEnd().toLocalDate();
             if (!endDate.isAfter(startDate)) {
                 return ResponseEntity.badRequest().body("MULTI_DAY_FIXED requires an end date strictly after the start date.");
+            }
+            // Validate each day's time window individually against building hours
+            java.time.LocalTime dailyStart = request.getStart().toLocalTime();
+            java.time.LocalTime dailyEnd = request.getEnd().toLocalTime();
+            java.time.LocalDate cur = startDate;
+            while (!cur.isAfter(endDate)) {
+                LocalDateTime slotStart = LocalDateTime.of(cur, dailyStart);
+                LocalDateTime slotEnd;
+                if (!dailyEnd.isAfter(dailyStart)) {
+                    // Overnight: e.g. 18:00–02:00 → rolls to next day
+                    slotEnd = LocalDateTime.of(cur.plusDays(1), dailyEnd);
+                } else {
+                    slotEnd = LocalDateTime.of(cur, dailyEnd);
+                }
+                if (!buildingTimetableService.isBookingWithinBuildingHours(building.getId(), slotStart, slotEnd)) {
+                    return ResponseEntity.badRequest().body(
+                        "Event time on " + cur + " (" + dailyStart + "–" + dailyEnd + ") is outside building operating hours.");
+                }
+                cur = cur.plusDays(1);
             }
         }
 
@@ -172,6 +208,10 @@ public class EventController {
             m.put("maxAttendees", e.getMaxAttendees());
             m.put("buildingId", e.getBuilding() != null ? e.getBuilding().getId() : null);
             m.put("buildingName", e.getBuilding() != null ? e.getBuilding().getName() : null);
+            boolean hasApprovedBooking = roomBookingRequestRepository.existsByEvent_IdAndStatusIn(
+                    e.getId(),
+                    Set.of(com.campus.event.domain.RoomBookingStatus.APPROVED, com.campus.event.domain.RoomBookingStatus.CONFIRMED));
+            m.put("hasApprovedBooking", hasApprovedBooking);
             return m;
         }).collect(java.util.stream.Collectors.toList());
         return ResponseEntity.ok(body);

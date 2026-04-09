@@ -39,6 +39,8 @@ public class ProfileController {
         map.put("clubId", user.getClubId());
         map.put("roles", user.getRoles());
         map.put("managedBuildingId", user.getManagedBuildingId());
+        map.put("requestedRole", user.getRequestedRole());
+        map.put("isApproved", user.getRequestedRole() == null);
         return ResponseEntity.ok(map);
     }
 

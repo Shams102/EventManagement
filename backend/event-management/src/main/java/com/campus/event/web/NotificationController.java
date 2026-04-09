@@ -50,7 +50,7 @@ public class NotificationController {
     }
 
     @GetMapping("/mine")
-    @PreAuthorize("hasAnyRole('GENERAL_USER','CLUB_ASSOCIATE','FACULTY','ADMIN')")
+    @PreAuthorize("hasAnyRole('GENERAL_USER','CLUB_ASSOCIATE','FACULTY','ADMIN','CENTRAL_ADMIN','BUILDING_ADMIN')")
     public ResponseEntity<List<Map<String, Object>>> mine(@AuthenticationPrincipal UserDetails principal) {
         List<Notification> items = notificationRepository.findByUser_UsernameOrderByCreatedAtDesc(principal.getUsername());
         List<Map<String, Object>> body = items.stream().map(n -> {
@@ -68,7 +68,7 @@ public class NotificationController {
     }
 
     @GetMapping
-    @PreAuthorize("hasAnyRole('GENERAL_USER','CLUB_ASSOCIATE','FACULTY','ADMIN')")
+    @PreAuthorize("hasAnyRole('GENERAL_USER','CLUB_ASSOCIATE','FACULTY','ADMIN','CENTRAL_ADMIN','BUILDING_ADMIN')")
     public ResponseEntity<List<Map<String, Object>>> globalInbox(@AuthenticationPrincipal UserDetails principal) {
         List<com.campus.event.domain.NotificationDelivery> deliveries = centerService.getDeliveriesForUser(principal.getUsername());
         List<Map<String, Object>> body = deliveries.stream().map(d -> {
@@ -89,7 +89,7 @@ public class NotificationController {
     }
 
     @PostMapping("/broadcast")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasRole('CENTRAL_ADMIN')")
     public ResponseEntity<?> broadcast(@AuthenticationPrincipal UserDetails principal, @RequestBody Map<String, Object> body) {
         String title = (String) body.getOrDefault("title", "");
         String message = (String) body.getOrDefault("message", "");
@@ -102,7 +102,7 @@ public class NotificationController {
     }
 
     @PostMapping("/events/{eventId}")
-    @PreAuthorize("hasAnyRole('ADMIN','FACULTY','CLUB_ASSOCIATE')")
+    @PreAuthorize("hasAnyRole('ADMIN','FACULTY','CLUB_ASSOCIATE','CENTRAL_ADMIN','BUILDING_ADMIN')")
     public ResponseEntity<?> createEventNotification(@PathVariable Long eventId, @AuthenticationPrincipal UserDetails principal, @RequestBody Map<String, Object> body) {
         Event ev = eventRepository.findById(eventId).orElse(null);
         if (ev == null) return ResponseEntity.notFound().build();
@@ -121,7 +121,7 @@ public class NotificationController {
     }
 
     @GetMapping("/events/{eventId}")
-    @PreAuthorize("hasAnyRole('GENERAL_USER','CLUB_ASSOCIATE','FACULTY','ADMIN')")
+    @PreAuthorize("hasAnyRole('GENERAL_USER','CLUB_ASSOCIATE','FACULTY','ADMIN','CENTRAL_ADMIN','BUILDING_ADMIN')")
     public ResponseEntity<List<Map<String, Object>>> eventInbox(@PathVariable Long eventId, @AuthenticationPrincipal UserDetails principal) {
         // only registered users (or admins) can view event-tailored messages
         boolean isOwner = false;
@@ -184,7 +184,7 @@ public class NotificationController {
     }
 
     @PostMapping("/deliveries/{deliveryId}/mark-read")
-    @PreAuthorize("hasAnyRole('GENERAL_USER','CLUB_ASSOCIATE','FACULTY','ADMIN')")
+    @PreAuthorize("hasAnyRole('GENERAL_USER','CLUB_ASSOCIATE','FACULTY','ADMIN','CENTRAL_ADMIN','BUILDING_ADMIN')")
     public ResponseEntity<?> markRead(@PathVariable Long deliveryId, @AuthenticationPrincipal UserDetails principal) {
         try {
             centerService.markDeliveryRead(deliveryId, principal.getUsername());
@@ -197,7 +197,7 @@ public class NotificationController {
     }
 
     @PostMapping("/deliveries/{deliveryId}/mute")
-    @PreAuthorize("hasAnyRole('GENERAL_USER','CLUB_ASSOCIATE','FACULTY','ADMIN')")
+    @PreAuthorize("hasAnyRole('GENERAL_USER','CLUB_ASSOCIATE','FACULTY','ADMIN','CENTRAL_ADMIN','BUILDING_ADMIN')")
     public ResponseEntity<?> mute(@PathVariable Long deliveryId, @AuthenticationPrincipal UserDetails principal, @RequestBody Map<String, Object> body) {
         boolean mute = Boolean.TRUE.equals(body.get("mute"));
         try {
@@ -212,7 +212,7 @@ public class NotificationController {
 
     // Threads
     @PostMapping("/threads")
-    @PreAuthorize("hasAnyRole('GENERAL_USER','CLUB_ASSOCIATE','FACULTY','ADMIN')")
+    @PreAuthorize("hasAnyRole('GENERAL_USER','CLUB_ASSOCIATE','FACULTY','ADMIN','CENTRAL_ADMIN','BUILDING_ADMIN')")
     public ResponseEntity<?> createThread(@AuthenticationPrincipal UserDetails principal, @RequestBody Map<String, Object> body) {
         Long notificationId = body.get("notificationId") == null ? null : Long.valueOf(String.valueOf(body.get("notificationId")));
         Long eventId = body.get("eventId") == null ? null : Long.valueOf(String.valueOf(body.get("eventId")));
@@ -231,7 +231,7 @@ public class NotificationController {
     }
 
     @GetMapping("/threads/{threadId}/messages")
-    @PreAuthorize("hasAnyRole('GENERAL_USER','CLUB_ASSOCIATE','FACULTY','ADMIN')")
+    @PreAuthorize("hasAnyRole('GENERAL_USER','CLUB_ASSOCIATE','FACULTY','ADMIN','CENTRAL_ADMIN','BUILDING_ADMIN')")
     public ResponseEntity<List<Map<String, Object>>> getThreadMessages(@PathVariable Long threadId) {
         List<com.campus.event.domain.ThreadMessage> msgs = centerService.getMessages(threadId);
         List<Map<String, Object>> body = msgs.stream().map(m -> {
@@ -246,7 +246,7 @@ public class NotificationController {
     }
 
     @PostMapping("/threads/{threadId}/messages")
-    @PreAuthorize("hasAnyRole('GENERAL_USER','CLUB_ASSOCIATE','FACULTY','ADMIN')")
+    @PreAuthorize("hasAnyRole('GENERAL_USER','CLUB_ASSOCIATE','FACULTY','ADMIN','CENTRAL_ADMIN','BUILDING_ADMIN')")
     public ResponseEntity<?> postThreadMessage(@PathVariable Long threadId, @AuthenticationPrincipal UserDetails principal, @RequestBody Map<String, Object> body) {
         String content = (String) body.getOrDefault("content", "");
         User user = userRepository.findByUsername(principal.getUsername()).orElse(null);
@@ -255,7 +255,7 @@ public class NotificationController {
     }
 
     @PostMapping("/threads/{threadId}/close")
-    @PreAuthorize("hasAnyRole('CLUB_ASSOCIATE','FACULTY','ADMIN')")
+    @PreAuthorize("hasAnyRole('CLUB_ASSOCIATE','FACULTY','ADMIN','CENTRAL_ADMIN','BUILDING_ADMIN')")
     public ResponseEntity<?> closeThread(@PathVariable Long threadId, @AuthenticationPrincipal UserDetails principal) {
         User user = userRepository.findByUsername(principal.getUsername()).orElse(null);
         centerService.closeThread(threadId, user);

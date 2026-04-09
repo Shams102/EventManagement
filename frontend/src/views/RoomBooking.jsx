@@ -363,7 +363,12 @@ export default function RoomBooking() {
       const data = err.response?.data
       const detail = (data && (data.error || data.message)) ? (data.error || data.message)
         : (typeof data === 'string' ? data : err.message)
-      setMessage('Booking failed: ' + detail)
+      const isPendingDuplicate = /already pending/i.test(String(detail))
+      const msg = isPendingDuplicate
+        ? 'Request already pending for this event'
+        : 'Booking failed: ' + detail
+      setMessage(msg)
+      showToast({ message: msg, type: 'error' })
     } finally {
       if (mode === 'meeting' && useFixedSlotsForMeeting && Number(pref1) > 0 && meetingDate) {
         fetchFixedSlotAvailability(Number(pref1), meetingDate)
@@ -708,30 +713,6 @@ export default function RoomBooking() {
                 )}
               </div>
 
-              {mode === 'event' && Number(pref1) > 0 && eventId && (
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between">
-                    <div className="text-sm text-[#9CA3AF]">Fixed-slot availability (from weekly class timetable)</div>
-                    <div className="text-sm text-[#9CA3AF]">
-                      {fixedSlotLoading ? 'Checking availability…' : ''}
-                    </div>
-                  </div>
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
-                    {timeSlots.map(slot => {
-                      const isAvailable = fixedSlotAvailability.includes(slot)
-                      return (
-                        <div
-                          key={slot}
-                          className={`p-2 rounded-lg text-sm border ${isAvailable ? 'bg-emerald-900/30 border-emerald-700/40 text-emerald-300' : 'bg-rose-900/30 border-rose-700/40 text-rose-400'}`}
-                        >
-                          <div className="font-medium">{slot}</div>
-                          <div className="text-xs">{isAvailable ? 'Available' : 'Occupied'}</div>
-                        </div>
-                      )
-                    })}
-                  </div>
-                </div>
-              )}
 
               {/* Message Display */}
               {message && (
