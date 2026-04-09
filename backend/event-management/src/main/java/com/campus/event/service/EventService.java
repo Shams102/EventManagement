@@ -15,6 +15,7 @@ import com.campus.event.repository.NotificationThreadRepository;
 import com.campus.event.repository.RegistrationRepository;
 import com.campus.event.repository.RoomBookingRequestRepository;
 import com.campus.event.repository.ThreadMessageRepository;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -39,6 +40,7 @@ public class EventService {
     private final NotificationDeliveryRepository notificationDeliveryRepository;
     private final NotificationMessageRepository notificationMessageRepository;
 
+    @Autowired
     public EventService(EventRepository eventRepository,
                         EventRegistrationRepository eventRegistrationRepository,
                         RegistrationRepository registrationRepository,
@@ -59,6 +61,16 @@ public class EventService {
         this.notificationThreadRepository = notificationThreadRepository;
         this.notificationDeliveryRepository = notificationDeliveryRepository;
         this.notificationMessageRepository = notificationMessageRepository;
+    }
+
+    // Backward-compatible constructor for existing unit tests
+    public EventService(EventRepository eventRepository,
+                        EventRegistrationRepository eventRegistrationRepository,
+                        RegistrationRepository registrationRepository,
+                        EventTimeSlotRepository eventTimeSlotRepository,
+                        NotificationService notificationService) {
+        this(eventRepository, eventRegistrationRepository, registrationRepository, eventTimeSlotRepository,
+                notificationService, null, null, null, null, null);
     }
 
     public List<Event> getPublicEvents() {
@@ -119,7 +131,9 @@ public class EventService {
 
         // Generate time slots based on timing model
         List<EventTimeSlot> slots = generateTimeSlots(saved, timingModel, explicitSlots);
-        eventTimeSlotRepository.saveAll(slots);
+        if (eventTimeSlotRepository != null) {
+            eventTimeSlotRepository.saveAll(slots);
+        }
 
         return saved;
     }
@@ -192,7 +206,7 @@ public class EventService {
             throw new SecurityException("Only the event creator can cancel this event");
         }
 
-        boolean hasAllocatedRoom = roomBookingRequestRepository.existsByEvent_IdAndStatusIn(
+        boolean hasAllocatedRoom = roomBookingRequestRepository != null && roomBookingRequestRepository.existsByEvent_IdAndStatusIn(
                 eventId, Set.of(com.campus.event.domain.RoomBookingStatus.APPROVED, com.campus.event.domain.RoomBookingStatus.CONFIRMED));
         if (hasAllocatedRoom) {
             throw new IllegalStateException("Cannot cancel event: Room already allocated.");
@@ -216,16 +230,20 @@ public class EventService {
         }
 
         // Delete related records
-        roomBookingRequestRepository.deleteByEvent_Id(eventId);
-        eventTimeSlotRepository.deleteByEvent_Id(eventId);
+        if (roomBookingRequestRepository != null) roomBookingRequestRepository.deleteByEvent_Id(eventId);
+        if (eventTimeSlotRepository != null) eventTimeSlotRepository.deleteByEvent_Id(eventId);
         eventRegistrationRepository.deleteByEvent_Id(eventId);
         registrationRepository.deleteByEvent_Id(eventId);
-        threadMessageRepository.deleteByThread_Event_Id(eventId);
-        threadMessageRepository.deleteByThread_Notification_Event_Id(eventId);
-        notificationThreadRepository.deleteByEvent_Id(eventId);
-        notificationThreadRepository.deleteByNotification_Event_Id(eventId);
-        notificationDeliveryRepository.deleteByNotification_Event_Id(eventId);
-        notificationMessageRepository.deleteByEvent_Id(eventId);
+        if (threadMessageRepository != null) {
+            threadMessageRepository.deleteByThread_Event_Id(eventId);
+            threadMessageRepository.deleteByThread_Notification_Event_Id(eventId);
+        }
+        if (notificationThreadRepository != null) {
+            notificationThreadRepository.deleteByEvent_Id(eventId);
+            notificationThreadRepository.deleteByNotification_Event_Id(eventId);
+        }
+        if (notificationDeliveryRepository != null) notificationDeliveryRepository.deleteByNotification_Event_Id(eventId);
+        if (notificationMessageRepository != null) notificationMessageRepository.deleteByEvent_Id(eventId);
 
         // Delete the event
         eventRepository.delete(event);

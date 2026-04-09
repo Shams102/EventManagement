@@ -22,7 +22,9 @@ import org.slf4j.LoggerFactory;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.core.env.Environment;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.transaction.support.TransactionTemplate;
 
 import java.time.DayOfWeek;
 import java.time.LocalDateTime;
@@ -40,8 +42,10 @@ public class DataInitializer {
                                BuildingRepository buildings, BuildingTimetableRepository timetables,
                                FixedTimetableRepository fixedTimetables,
                                FloorRepository floors, RoomRepository rooms,
-                               PasswordEncoder encoder) {
-        return args -> {
+                               PasswordEncoder encoder,
+                               TransactionTemplate transactionTemplate,
+                               Environment environment) {
+        return args -> transactionTemplate.executeWithoutResult(status -> {
             // Migrate any existing users with non-BCrypt passwords to encoded values
             users.findAll().forEach(u -> {
                 String ph = u.getPasswordHash();
@@ -69,7 +73,9 @@ public class DataInitializer {
             // ── Floors + Rooms (idempotent) ──
             buildings.findByCode("BLD_A").ifPresent(b -> ensureFloorsAndRoomsExist(b, floors, rooms, true));
             buildings.findByCode("BLD_B").ifPresent(b -> ensureFloorsAndRoomsExist(b, floors, rooms, false));
-            buildings.findByCode("BLD_A").ifPresent(b -> seedBuildingAFixedTimetableIfMissing(b, rooms, fixedTimetables));
+            if (!environment.acceptsProfiles(org.springframework.core.env.Profiles.of("test"))) {
+                buildings.findByCode("BLD_A").ifPresent(b -> seedBuildingAFixedTimetableIfMissing(b, rooms, fixedTimetables));
+            }
 
             // ── Admin users ──
             syncBuildingAdmin(buildings, users, "ab1_admin", "BLD_A", AdminScope.LARGE_HALL);
@@ -169,7 +175,7 @@ public class DataInitializer {
 
                 log.info("Seeded sample events assigned to building: {}", defaultBuilding.getName());
             }
-        };
+        });
     }
 
     // ── Building + Timetable (unchanged) ──

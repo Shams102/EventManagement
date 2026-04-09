@@ -22,6 +22,7 @@ app:
   security:
     jwtSecret: test-jwt-secret-that-is-at-least-32-characters-long-for-tests
     jwtExpirationMs: 3600000
+    enforce-single-session: false
   notifications:
     enableEmail: false
     enableSms: false

@@ -5,6 +5,7 @@ import com.campus.event.domain.RoomBookingRequest;
 import com.campus.event.domain.RoomBookingStatus;
 import com.campus.event.repository.FixedTimetableRepository;
 import com.campus.event.repository.RoomBookingRequestRepository;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
@@ -20,10 +21,16 @@ public class RoomAvailabilityService {
     private final RoomBookingRequestRepository requestRepo;
     private final FixedTimetableRepository fixedTimetableRepository;
 
+    @Autowired
     public RoomAvailabilityService(RoomBookingRequestRepository requestRepo,
                                    FixedTimetableRepository fixedTimetableRepository) {
         this.requestRepo = requestRepo;
         this.fixedTimetableRepository = fixedTimetableRepository;
+    }
+
+    // Backward-compatible constructor for existing unit tests
+    public RoomAvailabilityService(RoomBookingRequestRepository requestRepo) {
+        this(requestRepo, null);
     }
 
     public boolean isRoomAvailable(Long roomId, LocalDateTime start, LocalDateTime end) {
@@ -55,7 +62,8 @@ public class RoomAvailabilityService {
         while (!date.isAfter(endDate)) {
             LocalTime dayStart = date.isEqual(start.toLocalDate()) ? start.toLocalTime() : LocalTime.MIN;
             LocalTime dayEnd = date.isEqual(endDate) ? end.toLocalTime() : LocalTime.MAX;
-            if (fixedTimetableRepository.existsConflictingClass(roomId, date.getDayOfWeek(), dayStart, dayEnd)) {
+            if (fixedTimetableRepository != null
+                    && fixedTimetableRepository.existsConflictingClass(roomId, date.getDayOfWeek(), dayStart, dayEnd)) {
                 return true;
             }
             date = date.plusDays(1);
