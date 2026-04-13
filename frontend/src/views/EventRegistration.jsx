@@ -26,7 +26,7 @@ export default function EventRegistration() {
       .then(res => setEvent(res.data))
       .catch(() => setEvent(null))
     // Fetch room allocation for this event (best-effort, won't block rendering)
-    api.get(`/api/events/${eventId}/room-allocations`)
+    api.get(`/api/public/events/${eventId}/room-allocations`)
       .then(res => setAllocation(res.data))
       .catch(() => setAllocation(null))
   }, [eventId])
@@ -65,15 +65,21 @@ export default function EventRegistration() {
   const registrationDeadlineStr = event && event.startTime ? new Date(new Date(event.startTime).getTime() - 2 * 24 * 60 * 60 * 1000).toLocaleString() : ''
 
   const renderLocation = () => {
-    const slots = Array.isArray(allocation?.slots) ? allocation.slots : []
+    const rawSlots = Array.isArray(allocation?.slots) ? allocation.slots : []
+    // Sort slots by date to guarantee display order
+    const slots = [...rawSlots].sort((a, b) => {
+      const da = a?.date || ''; const db = b?.date || ''
+      return da < db ? -1 : da > db ? 1 : 0
+    })
     if (slots.length === 0) return event?.location || 'TBD'
+    const allocated = slots.filter(s => s && s.allocated)
+    if (allocated.length === 0) return event?.location || 'TBD'
     if (slots.length === 1) {
-      const s = slots[0]
-      return s?.allocated ? (s?.roomName || s?.room || event?.location || 'TBD') : (event?.location || 'TBD')
+      return allocated[0]?.roomName || allocated[0]?.room || event?.location || 'TBD'
     }
     // Multi-slot: show per-day rooms
     return slots.map((s, i) => (
-      `Day ${s?.dayIndex != null ? s.dayIndex + 1 : i + 1}: ${s?.allocated ? (s?.roomName || s?.room || 'TBD') : 'TBD'}`
+      `Day ${s?.dayIndex != null ? s.dayIndex + 1 : i + 1} \u2192 ${s?.allocated ? (s?.roomName || s?.room || 'TBD') : 'TBD'}`
     )).join(', ')
   }
 

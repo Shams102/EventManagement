@@ -26,7 +26,7 @@ export default function RoomBooking() {
   const [meetingStart, setMeetingStart] = useState('')
   const [meetingEnd, setMeetingEnd] = useState('')
   const [meetingPurpose, setMeetingPurpose] = useState('')
-  const [roomConflicts, setRoomConflicts] = useState([])
+
   const [roomWindowAvailability, setRoomWindowAvailability] = useState({})
   const [roomWindowLoading, setRoomWindowLoading] = useState(false)
   // Aggregated per-slot event availability (new)
@@ -290,31 +290,7 @@ export default function RoomBooking() {
     }
   }, [mode, eventId, meetingStart, meetingEnd, events, useFixedSlotsForMeeting])
 
-  const loadRoomConflicts = (roomId) => {
-    let start, end
-    if (mode === 'event') {
-      const ev = events.find(e => e.id === Number(eventId))
-      if (!ev || !ev.startTime || !ev.endTime) return
-      start = ev.startTime
-      end = ev.endTime
-    } else {
-      if (!meetingStart || !meetingEnd) return
-      start = toLocalDateTimeSeconds(meetingStart)
-      end = toLocalDateTimeSeconds(meetingEnd)
-    }
-    api.get(`/api/rooms/${roomId}/availability`, { params: { start, end } })
-      .then(res => {
-        const available = !!(res.data && (res.data.available === true || res.data.available === 'true'))
-        setRoomConflicts([{
-          id: `availability-${roomId}`,
-          title: available ? 'This room is AVAILABLE in the selected window' : 'This room is OCCUPIED in the selected window',
-          start: null,
-          end: null,
-          status: available ? 'AVAILABLE' : 'OCCUPIED'
-        }])
-      })
-      .catch(() => setRoomConflicts([]))
-  }
+
 
   const onSubmit = async (e) => {
     e.preventDefault()
@@ -350,7 +326,6 @@ export default function RoomBooking() {
           showToast({ message: 'Request Sent for Approval', type: 'success' })
           setEventId(''); setPref1(''); setPref2(''); setPref3('')
           setMeetingStart(''); setMeetingEnd(''); setMeetingPurpose('')
-          setRoomConflicts([])
         } else {
           setMessage('Event Request failed')
         }
@@ -375,7 +350,6 @@ export default function RoomBooking() {
           showToast({ message: 'Booking Confirmed', type: 'success' })
           setEventId(''); setPref1(''); setPref2(''); setPref3('')
           setMeetingStart(''); setMeetingEnd(''); setMeetingPurpose('')
-          setRoomConflicts([])
         } else {
           setMessage('Meeting Request failed')
         }
@@ -676,8 +650,6 @@ export default function RoomBooking() {
                     onChange={(e)=>{
                       const v = e.target.value
                       setPref1(v)
-                      setRoomConflicts([])
-                      if (v) loadRoomConflicts(Number(v))
                     }}
                     required
                   >
@@ -883,26 +855,7 @@ export default function RoomBooking() {
             )}
           </div>
 
-          {roomConflicts.length > 0 && (
-            <div className="card mt-6">
-              <h3 className="text-lg font-semibold text-[#E5E7EB] mb-4">Room Status</h3>
-              <div className="space-y-2 text-sm text-[#9CA3AF]">
-                {roomConflicts.map(rc => (
-                  <div key={rc.id} className="flex items-center justify-between">
-                    <div>
-                      <div className="font-medium text-[#E5E7EB]">{rc.title}</div>
-                      <div className="text-xs text-[#9CA3AF]">
-                        {rc.start && new Date(rc.start).toLocaleString()} – {rc.end && new Date(rc.end).toLocaleString()}
-                      </div>
-                    </div>
-                    <span className={`text-xs px-2 py-1 rounded-full ${rc.status === 'AVAILABLE' ? 'bg-emerald-900/40 text-emerald-300' : 'bg-rose-900/40 text-rose-400'}`}>
-                      {rc.status}
-                    </span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
+
 
           {/* Booking Guidelines */}
           <div className="card mt-6">

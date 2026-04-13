@@ -9,8 +9,10 @@ import com.campus.event.repository.EventRepository;
 import com.campus.event.repository.EventRegistrationRepository;
 import com.campus.event.repository.RoomBookingRequestRepository;
 import com.campus.event.repository.RoomRepository;
+import com.campus.event.service.EventService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
@@ -30,17 +32,20 @@ public class PublicController {
     private final RoomRepository roomRepository;
     private final RoomBookingRequestRepository bookingRepository;
     private final BuildingRepository buildingRepository;
+    private final EventService eventService;
 
     public PublicController(EventRepository eventRepository,
                             EventRegistrationRepository eventRegistrationRepository,
                             RoomRepository roomRepository,
                             RoomBookingRequestRepository bookingRepository,
-                            BuildingRepository buildingRepository) {
+                            BuildingRepository buildingRepository,
+                            EventService eventService) {
         this.eventRepository = eventRepository;
         this.eventRegistrationRepository = eventRegistrationRepository;
         this.roomRepository = roomRepository;
         this.bookingRepository = bookingRepository;
         this.buildingRepository = buildingRepository;
+        this.eventService = eventService;
     }
 
     @GetMapping("/buildings")
@@ -228,5 +233,20 @@ public class PublicController {
                     return m;
                 })
                 .collect(Collectors.toList());
+    }
+
+    /**
+     * Public endpoint: room allocations for a public event (no auth required).
+     * Reuses the same slot-based logic as the secured endpoint.
+     */
+    @GetMapping("/events/{eventId}/room-allocations")
+    public ResponseEntity<?> publicEventRoomAllocations(@PathVariable Long eventId) {
+        Event event = eventRepository.findById(eventId).orElse(null);
+        if (event == null) return ResponseEntity.notFound().build();
+        // Only expose allocations for public events
+        if (!event.isPublic()) {
+            return ResponseEntity.status(403).body(Map.of("error", "Event is not public"));
+        }
+        return ResponseEntity.ok(eventService.getEventRoomAllocations(eventId));
     }
 }

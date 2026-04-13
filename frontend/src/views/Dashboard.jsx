@@ -97,7 +97,12 @@ export default function Dashboard() {
 
   const renderEventRoomAllocation = (ev) => {
     const alloc = eventRoomAllocations[Number(ev.id)]
-    const slots = Array.isArray(alloc?.slots) ? alloc.slots : []
+    const rawSlots = Array.isArray(alloc?.slots) ? alloc.slots : []
+    // Sort slots by date to guarantee display order
+    const slots = [...rawSlots].sort((a, b) => {
+      const da = a?.date || ''; const db = b?.date || ''
+      return da < db ? -1 : da > db ? 1 : 0
+    })
     if (slots.length === 0) return <span>📍 TBD</span>
 
     const allocated = slots.filter(s => s && s.allocated)
@@ -116,7 +121,7 @@ export default function Dashboard() {
         <div className="mt-1 space-y-1">
           {slots.map((s, i) => (
             <div key={`${ev.id}-slot-${i}`}>
-              📍 Day {(s?.dayIndex != null ? s.dayIndex + 1 : i + 1)}: {s?.allocated ? (s?.roomName || 'TBD') : 'TBD'}
+              📍 Day {(s?.dayIndex != null ? s.dayIndex + 1 : i + 1)} → {s?.allocated ? (s?.roomName || 'TBD') : 'TBD'}
             </div>
           ))}
         </div>
@@ -128,7 +133,12 @@ export default function Dashboard() {
     const eventId = Number(booking?.eventId)
     if (!eventId) return (booking?.allocatedRoom || 'TBD')
     const alloc = eventRoomAllocations[eventId]
-    const slots = Array.isArray(alloc?.slots) ? alloc.slots : []
+    const rawSlots = Array.isArray(alloc?.slots) ? alloc.slots : []
+    // Sort slots by date to guarantee display order
+    const slots = [...rawSlots].sort((a, b) => {
+      const da = a?.date || ''; const db = b?.date || ''
+      return da < db ? -1 : da > db ? 1 : 0
+    })
     if (slots.length === 0) return (booking?.allocatedRoom || 'TBD')
     if (slots.length === 1) {
       const s = slots[0]
@@ -138,7 +148,7 @@ export default function Dashboard() {
       <div className="mt-1 space-y-1">
         {slots.map((s, i) => (
           <div key={`${booking.id}-alloc-${i}`} className="text-xs text-gray-500">
-            Day {(s?.dayIndex != null ? s.dayIndex + 1 : i + 1)}: {s?.allocated ? (s?.roomName || s?.room || 'TBD') : 'TBD'}
+            Day {(s?.dayIndex != null ? s.dayIndex + 1 : i + 1)} → {s?.allocated ? (s?.roomName || s?.room || 'TBD') : 'TBD'}
           </div>
         ))}
       </div>

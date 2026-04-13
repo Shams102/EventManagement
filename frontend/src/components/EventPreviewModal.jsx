@@ -2,18 +2,24 @@ import React from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
 
 export default function EventPreviewModal({ isOpen, event, allocation, eligibilityText, onClose, onRegister }) {
-  const slots = Array.isArray(allocation?.slots) ? allocation.slots : []
+  const rawSlots = Array.isArray(allocation?.slots) ? allocation.slots : []
+  // Sort slots by date to guarantee display order
+  const slots = [...rawSlots].sort((a, b) => {
+    const da = a?.date || ''; const db = b?.date || ''
+    return da < db ? -1 : da > db ? 1 : 0
+  })
   const renderLocation = () => {
     if (slots.length === 0) return (event?.location || 'TBD')
+    const allocated = slots.filter(s => s && s.allocated)
+    if (allocated.length === 0) return (event?.location || 'TBD')
     if (slots.length === 1) {
-      const s = slots[0]
-      return s?.allocated ? (s?.roomName || s?.room || 'TBD') : 'TBD'
+      return allocated[0]?.roomName || allocated[0]?.room || 'TBD'
     }
     return (
       <div className="space-y-1">
         {slots.map((s, i) => (
           <div key={`modal-slot-${i}`}>
-            Day {(s?.dayIndex != null ? s.dayIndex + 1 : i + 1)}: {s?.allocated ? (s?.roomName || s?.room || 'TBD') : 'TBD'}
+            Day {(s?.dayIndex != null ? s.dayIndex + 1 : i + 1)} → {s?.allocated ? (s?.roomName || s?.room || 'TBD') : 'TBD'}
           </div>
         ))}
       </div>

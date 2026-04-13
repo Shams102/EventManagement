@@ -38,7 +38,7 @@ export default function Events() {
       const ids = list.map(e => Number(e.id)).filter(n => !Number.isNaN(n) && n > 0)
       if (ids.length > 0) {
         const allocPairs = await Promise.allSettled(ids.map(async (id) => {
-          const r = await api.get(`/api/events/${id}/room-allocations`)
+          const r = await api.get(`/api/public/events/${id}/room-allocations`)
           return [id, r.data]
         }))
         const map = {}
@@ -62,13 +62,21 @@ export default function Events() {
 
   const formatAllocation = (eventId, fallbackLocation) => {
     const alloc = eventAllocations[Number(eventId)]
-    const slots = Array.isArray(alloc?.slots) ? alloc.slots : []
+    const rawSlots = Array.isArray(alloc?.slots) ? alloc.slots : []
+    // Sort slots by date to guarantee display order
+    const slots = [...rawSlots].sort((a, b) => {
+      const da = a?.date || ''; const db = b?.date || ''
+      return da < db ? -1 : da > db ? 1 : 0
+    })
     if (slots.length === 0) return fallbackLocation || 'TBD'
+    const allocated = slots.filter(s => s && s.allocated)
+    if (allocated.length === 0) return fallbackLocation || 'TBD'
     if (slots.length === 1) {
-      const s = slots[0]
-      return s?.allocated ? (s?.roomName || s?.room || 'TBD') : 'TBD'
+      return allocated[0]?.roomName || allocated[0]?.room || 'TBD'
     }
-    return 'Multiple rooms assigned'
+    // Multi-day: show count summary for compact card display
+    const allocCount = allocated.length
+    return `${allocCount}/${slots.length} rooms assigned`
   }
 
   useEffect(() => {
