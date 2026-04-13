@@ -305,7 +305,7 @@ export default function Dashboard() {
                       )}
                     </div>
                     <div className="text-xs text-gray-500 mt-1">
-                      📍 {ev.location || 'TBD'}
+                      {renderEventRoomAllocation(ev)}
                     </div>
                   </div>
                 ))}

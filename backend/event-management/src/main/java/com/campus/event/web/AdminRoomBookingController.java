@@ -9,6 +9,7 @@ import com.campus.event.domain.RoomBookingRequest;
 import com.campus.event.domain.RoomBookingStatus;
 import com.campus.event.domain.User;
 import com.campus.event.repository.EventRegistrationRepository;
+import com.campus.event.repository.EventRepository;
 import com.campus.event.repository.EventTimeSlotRepository;
 import com.campus.event.repository.RoomBookingRequestRepository;
 import com.campus.event.repository.RoomRepository;
@@ -50,13 +51,15 @@ public class AdminRoomBookingController {
     private final ScheduleService scheduleService;
     private final EventTimeSlotRepository eventTimeSlotRepository;
     private final BookingService bookingService;
+    private final EventRepository eventRepository;
 
     public AdminRoomBookingController(RoomBookingRequestRepository requestRepo, RoomRepository roomRepo,
                                       UserRepository userRepository, NotificationService notificationService,
                                       ScheduleService scheduleService,
                                       EventRegistrationRepository registrationRepo,
                                       EventTimeSlotRepository eventTimeSlotRepository,
-                                      BookingService bookingService) {
+                                      BookingService bookingService,
+                                      EventRepository eventRepository) {
         this.requestRepo = requestRepo;
         this.roomRepo = roomRepo;
         this.userRepository = userRepository;
@@ -65,6 +68,7 @@ public class AdminRoomBookingController {
         this.registrationRepo = registrationRepo;
         this.eventTimeSlotRepository = eventTimeSlotRepository;
         this.bookingService = bookingService;
+        this.eventRepository = eventRepository;
     }
 
     @GetMapping
@@ -283,9 +287,12 @@ public class AdminRoomBookingController {
                     }
                 }
 
-                // Per-slot conflict check
-                Map<String, List<String>> slotConflicts = scheduleService.validateEventRoomPreferences(
-                        room.getId(), null, null, slot.getSlotStart(), slot.getSlotEnd());
+                // Per-slot conflict check (skip building hours for overnight/continuous events)
+                boolean skipBuildingHours = req.getEvent() != null
+                        && req.getEvent().getTimingModel() == com.campus.event.domain.EventTimingModel.MULTI_DAY_CONTINUOUS;
+                Map<String, List<String>> slotConflicts = new HashMap<>();
+                slotConflicts.put(room.getId().toString(),
+                        scheduleService.getRoomConflicts(room.getId(), slot.getSlotStart(), slot.getSlotEnd(), skipBuildingHours));
                 List<String> conflicts = slotConflicts.getOrDefault(room.getId().toString(), java.util.Collections.emptyList());
                 if (!conflicts.isEmpty()) {
                     return ResponseEntity.badRequest().body("Room '" + room.getName() + "' has conflicts for slot Day " +
@@ -309,6 +316,12 @@ public class AdminRoomBookingController {
             req.setApprovedByUsername(principal.getUsername());
             requestRepo.save(req);
             rejectSplitSiblings(req);
+
+            // Update event.location immediately so UI stops showing 'TBD'
+            if (req.getEvent() != null && allocatedRoomNames.length() > 0) {
+                req.getEvent().setLocation(allocatedRoomNames.toString());
+                eventRepository.save(req.getEvent());
+            }
 
             if (req.getRequestedByUsername() != null) {
                 userRepository.findByUsername(req.getRequestedByUsername()).ifPresent(u -> {
@@ -352,18 +365,22 @@ public class AdminRoomBookingController {
             reqEnd = null;
         }
 
-        // Multi-slot aware conflict check at approval time
+        // Multi-slot aware conflict check at approval time (timing-model-aware for overnight events)
         if (reqStart != null && reqEnd != null) {
             List<EventTimeSlot> slots = req.getEvent() != null
                     ? eventTimeSlotRepository.findByEvent_IdOrderBySlotStartAsc(req.getEvent().getId())
                     : java.util.Collections.emptyList();
+            com.campus.event.domain.EventTimingModel evTimingModel = req.getEvent() != null
+                    ? req.getEvent().getTimingModel() : null;
             Map<String, List<String>> slotConflicts;
             if (slots.size() > 1) {
                 slotConflicts = scheduleService.validateEventRoomPreferencesMultiSlot(
-                        alloc.getId(), null, null, slots);
+                        alloc.getId(), null, null, slots, evTimingModel);
             } else {
-                slotConflicts = scheduleService.validateEventRoomPreferences(
-                        alloc.getId(), null, null, reqStart, reqEnd);
+                boolean skipBH = evTimingModel == com.campus.event.domain.EventTimingModel.MULTI_DAY_CONTINUOUS;
+                Map<String, List<String>> sc = new HashMap<>();
+                sc.put(alloc.getId().toString(), scheduleService.getRoomConflicts(alloc.getId(), reqStart, reqEnd, skipBH));
+                slotConflicts = sc;
             }
             List<String> allocConflicts = slotConflicts.getOrDefault(alloc.getId().toString(), java.util.Collections.emptyList());
             if (!allocConflicts.isEmpty()) {
@@ -377,6 +394,12 @@ public class AdminRoomBookingController {
         req.setApprovedByUsername(principal.getUsername());
         requestRepo.save(req);
         rejectSplitSiblings(req);
+
+        // Update event.location immediately so UI stops showing 'TBD'
+        if (req.getEvent() != null) {
+            req.getEvent().setLocation(alloc.getName());
+            eventRepository.save(req.getEvent());
+        }
 
         // Create booking records per slot for event-based approvals (best effort, won't fail approval)
         if (req.getEvent() != null) {
@@ -478,20 +501,25 @@ public class AdminRoomBookingController {
                 : java.util.Collections.emptyList();
 
         Map<String, List<String>> conflicts;
+        com.campus.event.domain.EventTimingModel evTimingModel = req.getEvent() != null
+                ? req.getEvent().getTimingModel() : null;
         if (slots.size() > 1) {
             conflicts = scheduleService.validateEventRoomPreferencesMultiSlot(
                     req.getPref1() != null ? req.getPref1().getId() : null,
                     req.getPref2() != null ? req.getPref2().getId() : null,
                     req.getPref3() != null ? req.getPref3().getId() : null,
-                    slots
+                    slots,
+                    evTimingModel
             );
         } else {
-            conflicts = scheduleService.validateEventRoomPreferences(
-                    req.getPref1() != null ? req.getPref1().getId() : null,
-                    req.getPref2() != null ? req.getPref2().getId() : null,
-                    req.getPref3() != null ? req.getPref3().getId() : null,
-                    start, end
-            );
+            boolean skipBH = evTimingModel == com.campus.event.domain.EventTimingModel.MULTI_DAY_CONTINUOUS;
+            conflicts = new HashMap<>();
+            Long p1 = req.getPref1() != null ? req.getPref1().getId() : null;
+            Long p2 = req.getPref2() != null ? req.getPref2().getId() : null;
+            Long p3 = req.getPref3() != null ? req.getPref3().getId() : null;
+            if (p1 != null) conflicts.put(p1.toString(), scheduleService.getRoomConflicts(p1, start, end, skipBH));
+            if (p2 != null) conflicts.put(p2.toString(), scheduleService.getRoomConflicts(p2, start, end, skipBH));
+            if (p3 != null) conflicts.put(p3.toString(), scheduleService.getRoomConflicts(p3, start, end, skipBH));
         }
         return ResponseEntity.ok(conflicts);
     }

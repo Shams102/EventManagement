@@ -99,6 +99,13 @@ export default function CreateEvent() {
       // Send local time as 'YYYY-MM-DDTHH:MM:SS' so backend LocalDateTime stores the same local time.
       const startValue = `${startLocal}:00`
       const endValue = `${endLocal}:00`
+
+      // Auto-detect overnight/cross-day: upgrade SINGLE_DAY to MULTI_DAY_CONTINUOUS
+      let effectiveTimingModel = timingModel
+      if (timingModel === 'SINGLE_DAY' && startDate !== endDate) {
+        effectiveTimingModel = 'MULTI_DAY_CONTINUOUS'
+      }
+
       const res = await api.post('/api/events', {
         title: title.trim(),
         description: description.trim(),
@@ -109,8 +116,8 @@ export default function CreateEvent() {
         clubId: club || undefined,
         maxAttendees: maxAttendees ? Number(maxAttendees) : undefined,
         registrationSchema,
-        timingModel: timingModel,
-        timeSlots: timingModel === 'FLEXIBLE' ? timeSlots.map(ts => ({
+        timingModel: effectiveTimingModel,
+        timeSlots: effectiveTimingModel === 'FLEXIBLE' ? timeSlots.map(ts => ({
           slotStart: `${ts.date}T${ts.start}:00`,
           slotEnd: `${ts.date}T${ts.end}:00`
         })) : undefined

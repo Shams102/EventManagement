@@ -136,14 +136,28 @@ public class ScheduleService {
     }
 
     public List<String> getRoomConflicts(Long roomId, LocalDateTime start, LocalDateTime end) {
+        return getRoomConflicts(roomId, start, end, false);
+    }
+
+    /**
+     * Timing-model-aware conflict check. When {@code skipBuildingHours} is true,
+     * building operating-hours validation is skipped (used for MULTI_DAY_CONTINUOUS
+     * / overnight events). Room booking conflicts and fixed-timetable conflicts
+     * are ALWAYS enforced regardless of this flag.
+     */
+    public List<String> getRoomConflicts(Long roomId, LocalDateTime start, LocalDateTime end,
+                                          boolean skipBuildingHours) {
         List<String> messages = new ArrayList<>();
         Room room = roomRepository.findById(roomId).orElse(null);
         if (room == null) return messages;
 
-        Long buildingId = room.getFloor() != null && room.getFloor().getBuilding() != null
-                ? room.getFloor().getBuilding().getId() : null;
-        if (buildingId != null && !buildingTimetableService.isBookingWithinBuildingHours(buildingId, start, end)) {
-            messages.add("Requested time is outside this building's operating hours (see building timetable).");
+        // Building hours check — skipped for overnight/continuous events
+        if (!skipBuildingHours) {
+            Long buildingId = room.getFloor() != null && room.getFloor().getBuilding() != null
+                    ? room.getFloor().getBuilding().getId() : null;
+            if (buildingId != null && !buildingTimetableService.isBookingWithinBuildingHours(buildingId, start, end)) {
+                messages.add("Requested time is outside this building's operating hours (see building timetable).");
+            }
         }
 
         // Check against existing bookings for the whole period
@@ -178,6 +192,47 @@ public class ScheduleService {
         }
 
         return messages;
+    }
+
+    /**
+     * Multi-slot validation that is aware of timing model.
+     * For MULTI_DAY_CONTINUOUS events, skips building-hours validation
+     * while still enforcing room conflicts and timetable conflicts.
+     */
+    public Map<String, List<String>> validateEventRoomPreferencesMultiSlot(
+            Long pref1Id, Long pref2Id, Long pref3Id,
+            List<com.campus.event.domain.EventTimeSlot> timeSlots,
+            com.campus.event.domain.EventTimingModel timingModel) {
+        if (timeSlots == null || timeSlots.isEmpty()) {
+            return new HashMap<>();
+        }
+
+        boolean skipBuildingHours = timingModel == com.campus.event.domain.EventTimingModel.MULTI_DAY_CONTINUOUS;
+
+        // If single slot, delegate
+        if (timeSlots.size() == 1) {
+            com.campus.event.domain.EventTimeSlot slot = timeSlots.get(0);
+            Map<String, List<String>> conflicts = new HashMap<>();
+            if (pref1Id != null) conflicts.put(pref1Id.toString(), getRoomConflicts(pref1Id, slot.getSlotStart(), slot.getSlotEnd(), skipBuildingHours));
+            if (pref2Id != null) conflicts.put(pref2Id.toString(), getRoomConflicts(pref2Id, slot.getSlotStart(), slot.getSlotEnd(), skipBuildingHours));
+            if (pref3Id != null) conflicts.put(pref3Id.toString(), getRoomConflicts(pref3Id, slot.getSlotStart(), slot.getSlotEnd(), skipBuildingHours));
+            return conflicts;
+        }
+
+        Map<String, List<String>> conflicts = new HashMap<>();
+        Long[] prefIds = {pref1Id, pref2Id, pref3Id};
+        for (Long prefId : prefIds) {
+            if (prefId == null) continue;
+            List<String> allMessages = new ArrayList<>();
+            for (com.campus.event.domain.EventTimeSlot slot : timeSlots) {
+                List<String> slotConflicts = getRoomConflicts(prefId, slot.getSlotStart(), slot.getSlotEnd(), skipBuildingHours);
+                for (String msg : slotConflicts) {
+                    allMessages.add("[Day " + (slot.getDayIndex() != null ? slot.getDayIndex() + 1 : "?") + "] " + msg);
+                }
+            }
+            conflicts.put(prefId.toString(), allMessages);
+        }
+        return conflicts;
     }
     
     public List<String> getAvailableSlots(Long roomId, LocalDate date) {

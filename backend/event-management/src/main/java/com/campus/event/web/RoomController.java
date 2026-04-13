@@ -106,6 +106,10 @@ public class RoomController {
             return ResponseEntity.badRequest().body("Slot not found");
         }
 
+        // Determine if building-hours validation should be skipped (overnight/continuous events)
+        boolean skipBuildingHours = slot.getEvent() != null
+                && slot.getEvent().getTimingModel() == com.campus.event.domain.EventTimingModel.MULTI_DAY_CONTINUOUS;
+
         List<Room> rooms = roomRepository.findAll().stream()
                 .filter(r -> r.getFloor() != null && r.getFloor().getBuilding() != null)
                 .collect(Collectors.toList());
@@ -120,7 +124,7 @@ public class RoomController {
             entry.put("buildingId", r.getFloor().getBuilding().getId());
             entry.put("buildingName", r.getFloor().getBuilding().getName());
 
-            List<String> conflicts = scheduleService.getRoomConflicts(r.getId(), slot.getSlotStart(), slot.getSlotEnd());
+            List<String> conflicts = scheduleService.getRoomConflicts(r.getId(), slot.getSlotStart(), slot.getSlotEnd(), skipBuildingHours);
             boolean available = conflicts.isEmpty();
             entry.put("available", available);
             entry.put("conflicts", conflicts);

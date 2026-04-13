@@ -89,6 +89,12 @@ public class EventController {
             }
         }
 
+        // Auto-detect overnight/cross-day: upgrade SINGLE_DAY to MULTI_DAY_CONTINUOUS
+        if (timingModel == com.campus.event.domain.EventTimingModel.SINGLE_DAY
+                && !request.getStart().toLocalDate().isEqual(request.getEnd().toLocalDate())) {
+            timingModel = com.campus.event.domain.EventTimingModel.MULTI_DAY_CONTINUOUS;
+        }
+
         // Build explicit time slots for FLEXIBLE mode
         java.util.List<com.campus.event.domain.EventTimeSlot> explicitSlots = null;
         if (request.getTimeSlots() != null && !request.getTimeSlots().isEmpty()) {
@@ -361,13 +367,10 @@ public class EventController {
                                                       com.campus.event.domain.EventTimingModel timingModel,
                                                       List<com.campus.event.domain.EventTimeSlot> slots) {
         if (slots == null || slots.isEmpty()) return true;
-        // Overnight / continuous mode: allow midnight boundary crossing without rejecting the whole event.
-        // Enforce only that the first slot starts within hours and the last slot ends within hours.
+        // Overnight / continuous events intentionally cross building hours — always allow.
+        // Room conflict checks and sanity checks are still enforced elsewhere.
         if (timingModel == com.campus.event.domain.EventTimingModel.MULTI_DAY_CONTINUOUS) {
-            com.campus.event.domain.EventTimeSlot first = slots.get(0);
-            com.campus.event.domain.EventTimeSlot last = slots.get(slots.size() - 1);
-            return buildingTimetableService.isTimeWithinBuildingHours(buildingId, first.getSlotStart())
-                    && buildingTimetableService.isTimeWithinBuildingHours(buildingId, last.getSlotEnd());
+            return true;
         }
         for (com.campus.event.domain.EventTimeSlot slot : slots) {
             if (!buildingTimetableService.isBookingWithinBuildingHours(buildingId, slot.getSlotStart(), slot.getSlotEnd())) {

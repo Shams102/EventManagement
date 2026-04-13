@@ -14,6 +14,7 @@ export default function EventRegistration() {
   const [answers, setAnswers] = useState({})
   const [loading, setLoading] = useState(false)
   const [event, setEvent] = useState(null)
+  const [allocation, setAllocation] = useState(null)
   const [closed, setClosed] = useState(false)
   const [isRegistered, setIsRegistered] = useState(false)
   const [justRegistered, setJustRegistered] = useState(false)
@@ -24,6 +25,10 @@ export default function EventRegistration() {
     api.get(`/api/public/events/${eventId}`)
       .then(res => setEvent(res.data))
       .catch(() => setEvent(null))
+    // Fetch room allocation for this event (best-effort, won't block rendering)
+    api.get(`/api/events/${eventId}/room-allocations`)
+      .then(res => setAllocation(res.data))
+      .catch(() => setAllocation(null))
   }, [eventId])
 
   useEffect(() => {
@@ -58,6 +63,19 @@ export default function EventRegistration() {
   const formattedDate = event && event.startTime ? new Date(event.startTime).toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' }) : ''
   const formattedTimeRange = event && event.startTime && event.endTime ? `${new Date(event.startTime).toLocaleTimeString([], {hour: 'numeric', minute: '2-digit'})} — ${new Date(event.endTime).toLocaleTimeString([], {hour: 'numeric', minute: '2-digit'})}` : ''
   const registrationDeadlineStr = event && event.startTime ? new Date(new Date(event.startTime).getTime() - 2 * 24 * 60 * 60 * 1000).toLocaleString() : ''
+
+  const renderLocation = () => {
+    const slots = Array.isArray(allocation?.slots) ? allocation.slots : []
+    if (slots.length === 0) return event?.location || 'TBD'
+    if (slots.length === 1) {
+      const s = slots[0]
+      return s?.allocated ? (s?.roomName || s?.room || event?.location || 'TBD') : (event?.location || 'TBD')
+    }
+    // Multi-slot: show per-day rooms
+    return slots.map((s, i) => (
+      `Day ${s?.dayIndex != null ? s.dayIndex + 1 : i + 1}: ${s?.allocated ? (s?.roomName || s?.room || 'TBD') : 'TBD'}`
+    )).join(', ')
+  }
 
   const onSubmit = async (e) => {
     e.preventDefault()
@@ -154,7 +172,7 @@ export default function EventRegistration() {
               )}
               <div className="flex items-center text-sm text-slate-400">
                 <span className="mr-2">📍</span>
-                <span>{event.location || 'TBD'}</span>
+                <span>{renderLocation()}</span>
               </div>
               <div className="mt-3 text-sm text-slate-400">
                 <div className="font-semibold text-slate-300 mb-1">Eligibility</div>

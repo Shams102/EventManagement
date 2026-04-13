@@ -156,13 +156,19 @@ public class RoomBookingRequestController {
 
         Map<String, List<String>> conflicts;
         if (eventMode && event != null) {
-            // Use per-slot conflict detection for multi-day events
+            // Use per-slot conflict detection for multi-day events (timing-model-aware)
             List<EventTimeSlot> slots = eventTimeSlotRepository.findByEvent_IdOrderBySlotStartAsc(event.getId());
+            com.campus.event.domain.EventTimingModel evTimingModel = event.getTimingModel();
             if (slots.isEmpty()) {
                 // Fallback for legacy events with no slots recorded
-                conflicts = scheduleService.validateEventRoomPreferences(req.pref1RoomId, req.pref2RoomId, req.pref3RoomId, event.getStartTime(), event.getEndTime());
+                boolean skipBH = evTimingModel == com.campus.event.domain.EventTimingModel.MULTI_DAY_CONTINUOUS;
+                Map<String, List<String>> c = new HashMap<>();
+                if (req.pref1RoomId != null) c.put(req.pref1RoomId.toString(), scheduleService.getRoomConflicts(req.pref1RoomId, event.getStartTime(), event.getEndTime(), skipBH));
+                if (req.pref2RoomId != null) c.put(req.pref2RoomId.toString(), scheduleService.getRoomConflicts(req.pref2RoomId, event.getStartTime(), event.getEndTime(), skipBH));
+                if (req.pref3RoomId != null) c.put(req.pref3RoomId.toString(), scheduleService.getRoomConflicts(req.pref3RoomId, event.getStartTime(), event.getEndTime(), skipBH));
+                conflicts = c;
             } else {
-                conflicts = scheduleService.validateEventRoomPreferencesMultiSlot(req.pref1RoomId, req.pref2RoomId, req.pref3RoomId, slots);
+                conflicts = scheduleService.validateEventRoomPreferencesMultiSlot(req.pref1RoomId, req.pref2RoomId, req.pref3RoomId, slots, evTimingModel);
             }
         } else {
             conflicts = scheduleService.validateEventRoomPreferences(req.pref1RoomId, req.pref2RoomId, req.pref3RoomId, req.meetingStart, req.meetingEnd);
@@ -363,11 +369,10 @@ public class RoomBookingRequestController {
 
     private boolean validateSlotsAgainstBuildingHours(Long buildingId, Event event, List<EventTimeSlot> slots) {
         if (slots == null || slots.isEmpty()) return true;
+        // Overnight / continuous events intentionally cross building hours — always allow.
+        // Room conflict checks and sanity checks are still enforced elsewhere.
         if (event != null && event.getTimingModel() == com.campus.event.domain.EventTimingModel.MULTI_DAY_CONTINUOUS) {
-            EventTimeSlot first = slots.get(0);
-            EventTimeSlot last = slots.get(slots.size() - 1);
-            return buildingTimetableService.isTimeWithinBuildingHours(buildingId, first.getSlotStart())
-                    && buildingTimetableService.isTimeWithinBuildingHours(buildingId, last.getSlotEnd());
+            return true;
         }
         for (EventTimeSlot slot : slots) {
             if (!buildingTimetableService.isBookingWithinBuildingHours(buildingId, slot.getSlotStart(), slot.getSlotEnd())) {
