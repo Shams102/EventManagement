@@ -71,5 +71,3 @@ public class JwtTokenService {
         return Keys.hmacShaKeyFor(secret.getBytes(java.nio.charset.StandardCharsets.UTF_8));
     }
 }
-
-

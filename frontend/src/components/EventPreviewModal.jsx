@@ -1,7 +1,24 @@
 import React from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
 
-export default function EventPreviewModal({ isOpen, event, eligibilityText, onClose, onRegister }) {
+export default function EventPreviewModal({ isOpen, event, allocation, eligibilityText, onClose, onRegister }) {
+  const slots = Array.isArray(allocation?.slots) ? allocation.slots : []
+  const renderLocation = () => {
+    if (slots.length === 0) return (event?.location || 'TBD')
+    if (slots.length === 1) {
+      const s = slots[0]
+      return s?.allocated ? (s?.roomName || s?.room || 'TBD') : 'TBD'
+    }
+    return (
+      <div className="space-y-1">
+        {slots.map((s, i) => (
+          <div key={`modal-slot-${i}`}>
+            Day {(s?.dayIndex != null ? s.dayIndex + 1 : i + 1)}: {s?.allocated ? (s?.roomName || s?.room || 'TBD') : 'TBD'}
+          </div>
+        ))}
+      </div>
+    )
+  }
   return (
     <AnimatePresence>
       {isOpen && event && (
@@ -60,7 +77,7 @@ export default function EventPreviewModal({ isOpen, event, eligibilityText, onCl
                 <div className="text-xs font-semibold text-slate-400 uppercase tracking-wide mb-1">
                   Location
                 </div>
-                <div>{event.location || 'TBD'}</div>
+                <div>{renderLocation()}</div>
               </div>
 
               {event.description && (

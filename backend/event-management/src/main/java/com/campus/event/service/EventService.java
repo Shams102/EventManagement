@@ -9,6 +9,7 @@ import com.campus.event.domain.User;
 import com.campus.event.repository.EventRegistrationRepository;
 import com.campus.event.repository.EventRepository;
 import com.campus.event.repository.EventTimeSlotRepository;
+import com.campus.event.repository.BookingRepository;
 import com.campus.event.repository.NotificationDeliveryRepository;
 import com.campus.event.repository.NotificationMessageRepository;
 import com.campus.event.repository.NotificationThreadRepository;
@@ -25,6 +26,7 @@ import java.time.LocalTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
+import java.util.Objects;
 
 @Service
 public class EventService {
@@ -39,6 +41,7 @@ public class EventService {
     private final NotificationThreadRepository notificationThreadRepository;
     private final NotificationDeliveryRepository notificationDeliveryRepository;
     private final NotificationMessageRepository notificationMessageRepository;
+    private final BookingRepository bookingRepository;
 
     @Autowired
     public EventService(EventRepository eventRepository,
@@ -50,7 +53,8 @@ public class EventService {
                         ThreadMessageRepository threadMessageRepository,
                         NotificationThreadRepository notificationThreadRepository,
                         NotificationDeliveryRepository notificationDeliveryRepository,
-                        NotificationMessageRepository notificationMessageRepository) {
+                        NotificationMessageRepository notificationMessageRepository,
+                        BookingRepository bookingRepository) {
         this.eventRepository = eventRepository;
         this.eventRegistrationRepository = eventRegistrationRepository;
         this.registrationRepository = registrationRepository;
@@ -61,6 +65,7 @@ public class EventService {
         this.notificationThreadRepository = notificationThreadRepository;
         this.notificationDeliveryRepository = notificationDeliveryRepository;
         this.notificationMessageRepository = notificationMessageRepository;
+        this.bookingRepository = bookingRepository;
     }
 
     // Backward-compatible constructor for existing unit tests
@@ -70,7 +75,91 @@ public class EventService {
                         EventTimeSlotRepository eventTimeSlotRepository,
                         NotificationService notificationService) {
         this(eventRepository, eventRegistrationRepository, registrationRepository, eventTimeSlotRepository,
-                notificationService, null, null, null, null, null);
+                notificationService, null, null, null, null, null, null);
+    }
+
+    public EventRoomAllocationDTO getEventRoomAllocations(Long eventId) {
+        if (eventId == null || eventTimeSlotRepository == null) {
+            return new EventRoomAllocationDTO(false, false, java.util.Collections.emptyList());
+        }
+        Event event = eventRepository.findById(eventId).orElse(null);
+        if (event == null) {
+            return new EventRoomAllocationDTO(false, false, java.util.Collections.emptyList());
+        }
+
+        List<EventTimeSlot> slots = eventTimeSlotRepository.findByEvent_IdOrderBySlotStartAsc(eventId);
+        if (slots.isEmpty()) {
+            return new EventRoomAllocationDTO(false, false, java.util.Collections.emptyList());
+        }
+
+        List<SlotAllocation> out = new ArrayList<>();
+        int allocatedSlots = 0;
+        for (EventTimeSlot slot : slots) {
+            final String eventToken = "[EVT:" + event.getId() + "]";
+            com.campus.event.domain.Booking booking = bookingRepository == null
+                    ? null
+                    : bookingRepository.findByStartTimeAndEndTime(slot.getSlotStart(), slot.getSlotEnd()).stream()
+                    .filter(b -> {
+                        String p = b.getPurpose() != null ? b.getPurpose().trim() : null;
+                        if (p != null && p.contains(eventToken)) {
+                            return true;
+                        }
+                        boolean samePurpose = Objects.equals(
+                                p,
+                                event.getTitle() != null ? event.getTitle().trim() : null
+                        );
+                        boolean sameCreator = b.getUser() != null
+                                && event.getCreatedBy() != null
+                                && Objects.equals(b.getUser().getUsername(), event.getCreatedBy().getUsername());
+                        return samePurpose || sameCreator;
+                    })
+                    .findFirst()
+                    .orElse(null);
+
+            String roomName = (booking != null && booking.getRoom() != null) ? booking.getRoom().getName() : null;
+            boolean allocated = roomName != null;
+            if (allocated) allocatedSlots++;
+
+            out.add(new SlotAllocation(
+                    slot.getSlotStart().toLocalDate(),
+                    slot.getDayIndex(),
+                    roomName,
+                    allocated
+            ));
+        }
+
+        int totalSlots = slots.size();
+        boolean fullyAllocated = allocatedSlots == totalSlots;
+        boolean partiallyAllocated = allocatedSlots > 0 && allocatedSlots < totalSlots;
+        return new EventRoomAllocationDTO(fullyAllocated, partiallyAllocated, out);
+    }
+
+    public static class EventRoomAllocationDTO {
+        public final boolean fullyAllocated;
+        public final boolean partiallyAllocated;
+        public final List<SlotAllocation> slots;
+
+        public EventRoomAllocationDTO(boolean fullyAllocated, boolean partiallyAllocated, List<SlotAllocation> slots) {
+            this.fullyAllocated = fullyAllocated;
+            this.partiallyAllocated = partiallyAllocated;
+            this.slots = slots;
+        }
+    }
+
+    public static class SlotAllocation {
+        public final LocalDate date;
+        public final Integer dayIndex;
+        public final String room;
+        public final String roomName;
+        public final boolean allocated;
+
+        public SlotAllocation(LocalDate date, Integer dayIndex, String roomName, boolean allocated) {
+            this.date = date;
+            this.dayIndex = dayIndex;
+            this.room = roomName;
+            this.roomName = roomName;
+            this.allocated = allocated;
+        }
     }
 
     public List<Event> getPublicEvents() {
@@ -140,7 +229,8 @@ public class EventService {
 
     /**
      * Generates time slots based on the timing model:
-     * - SINGLE_DAY / MULTI_DAY_CONTINUOUS: single slot from event start to end
+     * - SINGLE_DAY: single slot from event start to end
+     * - MULTI_DAY_CONTINUOUS: split into per-day slots
      * - MULTI_DAY_FIXED: one slot per day with the same daily start/end time
      * - FLEXIBLE: uses the explicit slots provided by the user
      */
@@ -150,9 +240,36 @@ public class EventService {
 
         switch (model) {
             case SINGLE_DAY:
-            case MULTI_DAY_CONTINUOUS:
-                // One continuous block
                 slots.add(new EventTimeSlot(event, event.getStartTime(), event.getEndTime(), 0));
+                break;
+
+            case MULTI_DAY_CONTINUOUS:
+                // Split continuous range into day-bounded slots:
+                // Day 1: start -> 23:59:59, middle: 00:00 -> 23:59:59, last: 00:00 -> end
+                LocalDate cStartDate = event.getStartTime().toLocalDate();
+                LocalDate cEndDate = event.getEndTime().toLocalDate();
+                if (cStartDate.equals(cEndDate)) {
+                    slots.add(new EventTimeSlot(event, event.getStartTime(), event.getEndTime(), 0));
+                    break;
+                }
+                int continuousDayIdx = 0;
+                LocalDate cCurrent = cStartDate;
+                while (!cCurrent.isAfter(cEndDate)) {
+                    LocalDateTime slotStart;
+                    LocalDateTime slotEnd;
+                    if (cCurrent.equals(cStartDate)) {
+                        slotStart = event.getStartTime();
+                        slotEnd = LocalDateTime.of(cCurrent, LocalTime.of(23, 59, 59));
+                    } else if (cCurrent.equals(cEndDate)) {
+                        slotStart = LocalDateTime.of(cCurrent, LocalTime.MIDNIGHT);
+                        slotEnd = event.getEndTime();
+                    } else {
+                        slotStart = LocalDateTime.of(cCurrent, LocalTime.MIDNIGHT);
+                        slotEnd = LocalDateTime.of(cCurrent, LocalTime.of(23, 59, 59));
+                    }
+                    slots.add(new EventTimeSlot(event, slotStart, slotEnd, continuousDayIdx++));
+                    cCurrent = cCurrent.plusDays(1);
+                }
                 break;
 
             case MULTI_DAY_FIXED:

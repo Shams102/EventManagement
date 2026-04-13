@@ -11,6 +11,7 @@ export default function Dashboard() {
   const [createdEvents, setCreatedEvents] = useState([])
   const [bookings, setBookings] = useState([])
   const [pendingApprovals, setPendingApprovals] = useState([])
+  const [eventRoomAllocations, setEventRoomAllocations] = useState({})
   const [loading, setLoading] = useState(true)
   const [cancellingId, setCancellingId] = useState(null)
   const [confirmId, setConfirmId] = useState(null)
@@ -46,7 +47,7 @@ export default function Dashboard() {
       calls.push(Promise.resolve({ key: 'pending', data: [] }))
     }
 
-    Promise.all(calls).then(([regsLegacyRes, regsUserRes, createdRes, bookingsRes, pendingRes]) => {
+    Promise.all(calls).then(async ([regsLegacyRes, regsUserRes, createdRes, bookingsRes, pendingRes]) => {
       const legacy = regsLegacyRes.data || []
       const userRegs = regsUserRes.data || []
       const mergedByEventId = new Map()
@@ -62,11 +63,87 @@ export default function Dashboard() {
         }
       }
       setRegistrations(Array.from(mergedByEventId.values()))
-      setCreatedEvents(createdRes.data || [])
-      setBookings(bookingsRes.data || [])
+      const created = createdRes.data || []
+      const mineBookings = bookingsRes.data || []
+      setCreatedEvents(created)
+      setBookings(mineBookings)
       setPendingApprovals(pendingRes?.data || [])
+
+      // Fetch slot-based room allocations for created events + event-based room requests
+      const eventIds = Array.from(new Set([
+        ...created.map(ev => Number(ev.id)),
+        ...mineBookings.map(b => Number(b.eventId)).filter(n => !Number.isNaN(n) && n > 0)
+      ]))
+      if (eventIds.length > 0) {
+        const allocPairs = await Promise.allSettled(
+          eventIds.map(async (eventId) => {
+            const res = await api.get(`/api/events/${eventId}/room-allocations`)
+            return [eventId, res.data]
+          })
+        )
+        const allocMap = {}
+        allocPairs.forEach((r) => {
+          if (r.status === 'fulfilled' && Array.isArray(r.value)) {
+            const [eventId, payload] = r.value
+            allocMap[Number(eventId)] = payload || null
+          }
+        })
+        setEventRoomAllocations(allocMap)
+      } else {
+        setEventRoomAllocations({})
+      }
     }).finally(() => setLoading(false))
   }, [isGeneralLike, isCreatorRole, isRoomApprovalAdmin])
+
+  const renderEventRoomAllocation = (ev) => {
+    const alloc = eventRoomAllocations[Number(ev.id)]
+    const slots = Array.isArray(alloc?.slots) ? alloc.slots : []
+    if (slots.length === 0) return <span>📍 TBD</span>
+
+    const allocated = slots.filter(s => s && s.allocated)
+    if (allocated.length === 0) return <span>📍 TBD</span>
+
+    if (slots.length === 1) {
+      return <span>📍 {allocated[0]?.roomName || 'TBD'}</span>
+    }
+
+    const title = 'Rooms allocated per day based on admin approval'
+    return (
+      <div title={title}>
+        {alloc?.partiallyAllocated
+          ? <div className="text-amber-400">📍 Rooms (Partial):</div>
+          : <div>📍 Rooms:</div>}
+        <div className="mt-1 space-y-1">
+          {slots.map((s, i) => (
+            <div key={`${ev.id}-slot-${i}`}>
+              📍 Day {(s?.dayIndex != null ? s.dayIndex + 1 : i + 1)}: {s?.allocated ? (s?.roomName || 'TBD') : 'TBD'}
+            </div>
+          ))}
+        </div>
+      </div>
+    )
+  }
+
+  const renderBookingAllocation = (booking) => {
+    const eventId = Number(booking?.eventId)
+    if (!eventId) return (booking?.allocatedRoom || 'TBD')
+    const alloc = eventRoomAllocations[eventId]
+    const slots = Array.isArray(alloc?.slots) ? alloc.slots : []
+    if (slots.length === 0) return (booking?.allocatedRoom || 'TBD')
+    if (slots.length === 1) {
+      const s = slots[0]
+      return s?.allocated ? (s?.roomName || s?.room || 'TBD') : 'TBD'
+    }
+    return (
+      <div className="mt-1 space-y-1">
+        {slots.map((s, i) => (
+          <div key={`${booking.id}-alloc-${i}`} className="text-xs text-gray-500">
+            Day {(s?.dayIndex != null ? s.dayIndex + 1 : i + 1)}: {s?.allocated ? (s?.roomName || s?.room || 'TBD') : 'TBD'}
+          </div>
+        ))}
+      </div>
+    )
+  }
 
   const now = new Date()
   const upcomingRegs = registrations.filter(e => e.startTime && new Date(e.endTime) >= now)
@@ -282,8 +359,8 @@ export default function Dashboard() {
                         </span>
                       </div>
                     <div className="text-xs text-gray-500 mt-1">
-                        📍 {ev.location || 'TBD'}
-                      </div>
+                      {renderEventRoomAllocation(ev)}
+                    </div>
 
                       {/* Confirmation modal */}
                       {isConfirming && (
@@ -392,7 +469,7 @@ export default function Dashboard() {
                       <div className="flex items-start justify-between mb-2">
                         <div>
                           <h3 className="font-medium text-gray-900">{b.eventTitle || 'Meeting'}</h3>
-                          <p className="text-sm text-gray-600">Allocated: {b.allocatedRoom || 'TBD'}</p>
+                          <p className="text-sm text-gray-600">Allocated: {renderBookingAllocation(b)}</p>
                         </div>
                         <span className={`text-xs px-2 py-1 rounded-full ${getStatusBadge(b.status)}`}>
                           {(b.status || '').charAt(0) + (b.status || '').slice(1).toLowerCase()}

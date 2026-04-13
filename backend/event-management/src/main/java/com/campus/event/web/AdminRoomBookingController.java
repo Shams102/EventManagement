@@ -13,6 +13,7 @@ import com.campus.event.repository.EventTimeSlotRepository;
 import com.campus.event.repository.RoomBookingRequestRepository;
 import com.campus.event.repository.RoomRepository;
 import com.campus.event.repository.UserRepository;
+import com.campus.event.service.BookingService;
 import com.campus.event.service.NotificationService;
 import com.campus.event.service.RoomApprovalRules;
 import com.campus.event.service.ScheduleService;
@@ -48,12 +49,14 @@ public class AdminRoomBookingController {
     private final EventRegistrationRepository registrationRepo;
     private final ScheduleService scheduleService;
     private final EventTimeSlotRepository eventTimeSlotRepository;
+    private final BookingService bookingService;
 
     public AdminRoomBookingController(RoomBookingRequestRepository requestRepo, RoomRepository roomRepo,
                                       UserRepository userRepository, NotificationService notificationService,
                                       ScheduleService scheduleService,
                                       EventRegistrationRepository registrationRepo,
-                                      EventTimeSlotRepository eventTimeSlotRepository) {
+                                      EventTimeSlotRepository eventTimeSlotRepository,
+                                      BookingService bookingService) {
         this.requestRepo = requestRepo;
         this.roomRepo = roomRepo;
         this.userRepository = userRepository;
@@ -61,6 +64,7 @@ public class AdminRoomBookingController {
         this.scheduleService = scheduleService;
         this.registrationRepo = registrationRepo;
         this.eventTimeSlotRepository = eventTimeSlotRepository;
+        this.bookingService = bookingService;
     }
 
     @GetMapping
@@ -157,15 +161,14 @@ public class AdminRoomBookingController {
                 m.put("timingModel", ev.getTimingModel().name());
                 List<EventTimeSlot> slots = eventTimeSlotRepository.findByEvent_IdOrderBySlotStartAsc(ev.getId());
                 m.put("slotCount", slots.size());
-                if (slots.size() > 1) {
-                    m.put("slots", slots.stream().map(s -> {
-                        Map<String, Object> sm = new HashMap<>();
-                        sm.put("day", s.getDayIndex() != null ? s.getDayIndex() + 1 : null);
-                        sm.put("slotStart", s.getSlotStart());
-                        sm.put("slotEnd", s.getSlotEnd());
-                        return sm;
-                    }).collect(Collectors.toList()));
-                }
+                m.put("slots", slots.stream().map(s -> {
+                    Map<String, Object> sm = new HashMap<>();
+                    sm.put("id", s.getId());
+                    sm.put("day", s.getDayIndex() != null ? s.getDayIndex() + 1 : null);
+                    sm.put("slotStart", s.getSlotStart());
+                    sm.put("slotEnd", s.getSlotEnd());
+                    return sm;
+                }).collect(Collectors.toList()));
             }
             if (ev.getBuilding() != null) {
                 m.put("buildingId", ev.getBuilding().getId());
@@ -206,6 +209,8 @@ public class AdminRoomBookingController {
 
     public static class ApproveBody {
         public Long allocatedRoomId;
+        /** Per-slot room allocation: key = slotId, value = roomId */
+        public Map<Long, Long> slotAllocations;
     }
 
     @PostMapping("/{id}/approve")
@@ -216,29 +221,112 @@ public class AdminRoomBookingController {
         if (req == null) {
             return ResponseEntity.notFound().build();
         }
-        if (body == null || body.allocatedRoomId == null) {
-            return ResponseEntity.badRequest().body("allocatedRoomId required");
-        }
-        // Force database-level pessimistic lock to serialize approvals for this room
-        Room alloc = roomRepo.findByIdWithPessimisticLock(body.allocatedRoomId).orElse(null);
-        if (alloc == null) {
-            return ResponseEntity.badRequest().body("Room not found");
+
+        // Determine if this is a slot-based approval or single-room legacy approval
+        boolean isSlotBased = body != null && body.slotAllocations != null && !body.slotAllocations.isEmpty();
+
+        if (body == null || (!isSlotBased && body.allocatedRoomId == null)) {
+            return ResponseEntity.badRequest().body("allocatedRoomId or slotAllocations required");
         }
 
         User currentUser = userRepository.findByUsername(principal.getUsername()).orElse(null);
         if (currentUser == null) {
             return ResponseEntity.status(403).body("Not allowed to approve this request");
         }
-        boolean isSuperAdmin = currentUser != null && currentUser.getRoles().contains(Role.ADMIN);
-        boolean isBuildingAdmin = currentUser != null && currentUser.getRoles().contains(Role.BUILDING_ADMIN);
-        boolean adminIsBounded = currentUser != null && currentUser.getManagedBuildingId() != null && currentUser.getAdminScope() != null;
-
+        boolean isSuperAdmin = currentUser.getRoles().contains(Role.ADMIN);
+        boolean isBuildingAdmin = currentUser.getRoles().contains(Role.BUILDING_ADMIN);
+        boolean adminIsBounded = currentUser.getManagedBuildingId() != null && currentUser.getAdminScope() != null;
         boolean bypassChecks = isSuperAdmin && !adminIsBounded;
 
         if (!bypassChecks) {
             if (!(isBuildingAdmin || isSuperAdmin) || !visibleToBuildingAdmin(req, currentUser)) {
                 return ResponseEntity.status(403).body("Not allowed to approve this request");
             }
+        }
+
+        // --- SLOT-BASED APPROVAL PATH ---
+        if (isSlotBased) {
+            // Resolve the user who requested (for Booking creation)
+            User requestingUser = req.getRequestedByUsername() != null
+                    ? userRepository.findByUsername(req.getRequestedByUsername()).orElse(null) : null;
+
+            StringBuilder allocatedRoomNames = new StringBuilder();
+            Room firstRoom = null;
+
+            for (Map.Entry<Long, Long> entry : body.slotAllocations.entrySet()) {
+                Long slotId = entry.getKey();
+                Long roomId = entry.getValue();
+
+                EventTimeSlot slot = eventTimeSlotRepository.findById(slotId).orElse(null);
+                if (slot == null) {
+                    return ResponseEntity.badRequest().body("Slot not found: " + slotId);
+                }
+
+                Room room = roomRepo.findByIdWithPessimisticLock(roomId).orElse(null);
+                if (room == null) {
+                    return ResponseEntity.badRequest().body("Room not found: " + roomId);
+                }
+
+                if (firstRoom == null) firstRoom = room;
+
+                // Building admin scope checks for each room
+                if (!bypassChecks) {
+                    if (currentUser.getManagedBuildingId() == null || currentUser.getAdminScope() == null) {
+                        return ResponseEntity.status(403).body("Admin must have managedBuildingId and adminScope");
+                    }
+                    if (room.getFloor() == null || room.getFloor().getBuilding() == null
+                            || !currentUser.getManagedBuildingId().equals(room.getFloor().getBuilding().getId())) {
+                        return ResponseEntity.status(403).body("Allocated room must be in your building");
+                    }
+                    if (currentUser.getAdminScope() != RoomApprovalRules.scopeForRoom(room)) {
+                        return ResponseEntity.status(403).body("Allocated room type does not match your admin scope");
+                    }
+                }
+
+                // Per-slot conflict check
+                Map<String, List<String>> slotConflicts = scheduleService.validateEventRoomPreferences(
+                        room.getId(), null, null, slot.getSlotStart(), slot.getSlotEnd());
+                List<String> conflicts = slotConflicts.getOrDefault(room.getId().toString(), java.util.Collections.emptyList());
+                if (!conflicts.isEmpty()) {
+                    return ResponseEntity.badRequest().body("Room '" + room.getName() + "' has conflicts for slot Day " +
+                            (slot.getDayIndex() != null ? slot.getDayIndex() + 1 : "?") + ": " + conflicts);
+                }
+
+                // Create booking per slot (best effort — won't fail the approval)
+                String purpose = req.getEvent() != null
+                        ? "[EVT:" + req.getEvent().getId() + "] " + req.getEvent().getTitle()
+                        : req.getMeetingPurpose();
+                bookingService.createBookingSafe(room.getId(), requestingUser, slot.getSlotStart(), slot.getSlotEnd(), purpose);
+
+                if (allocatedRoomNames.length() > 0) allocatedRoomNames.append(", ");
+                allocatedRoomNames.append(room.getName());
+            }
+
+            // Mark the request as approved with the first allocated room for backward compatibility
+            req.setAllocatedRoom(firstRoom);
+            req.setStatus(RoomBookingStatus.APPROVED);
+            req.setApprovedAt(LocalDateTime.now());
+            req.setApprovedByUsername(principal.getUsername());
+            requestRepo.save(req);
+            rejectSplitSiblings(req);
+
+            if (req.getRequestedByUsername() != null) {
+                userRepository.findByUsername(req.getRequestedByUsername()).ifPresent(u -> {
+                    String subj = "Room request approved";
+                    String msg = "Your room request (ID " + req.getId() + ") has been approved for room(s): " + allocatedRoomNames + ".";
+                    notificationService.notifyAllChannels(u, subj, msg);
+                });
+            }
+            return ResponseEntity.ok("Approved (slot-based)");
+        }
+
+        // --- LEGACY SINGLE-ROOM APPROVAL PATH (backward compatible) ---
+        Room alloc = roomRepo.findByIdWithPessimisticLock(body.allocatedRoomId).orElse(null);
+        if (alloc == null) {
+            return ResponseEntity.badRequest().body("Room not found");
+        }
+
+        if (!bypassChecks) {
             if (currentUser.getManagedBuildingId() == null || currentUser.getAdminScope() == null) {
                 return ResponseEntity.status(403).body("Admin must have managedBuildingId and adminScope when evaluating bounded access");
             }
@@ -266,8 +354,6 @@ public class AdminRoomBookingController {
 
         // Multi-slot aware conflict check at approval time
         if (reqStart != null && reqEnd != null) {
-
-            // Per-slot conflict check using schedule service (multi-day aware)
             List<EventTimeSlot> slots = req.getEvent() != null
                     ? eventTimeSlotRepository.findByEvent_IdOrderBySlotStartAsc(req.getEvent().getId())
                     : java.util.Collections.emptyList();
@@ -291,6 +377,21 @@ public class AdminRoomBookingController {
         req.setApprovedByUsername(principal.getUsername());
         requestRepo.save(req);
         rejectSplitSiblings(req);
+
+        // Create booking records per slot for event-based approvals (best effort, won't fail approval)
+        if (req.getEvent() != null) {
+            List<EventTimeSlot> slots = eventTimeSlotRepository.findByEvent_IdOrderBySlotStartAsc(req.getEvent().getId());
+            User requestingUser = req.getRequestedByUsername() != null
+                    ? userRepository.findByUsername(req.getRequestedByUsername()).orElse(null) : null;
+            String purpose = "[EVT:" + req.getEvent().getId() + "] " + req.getEvent().getTitle();
+            if (!slots.isEmpty()) {
+                for (EventTimeSlot slot : slots) {
+                    bookingService.createBookingSafe(alloc.getId(), requestingUser, slot.getSlotStart(), slot.getSlotEnd(), purpose);
+                }
+            } else {
+                bookingService.createBookingSafe(alloc.getId(), requestingUser, reqStart, reqEnd, purpose);
+            }
+        }
 
         if (req.getRequestedByUsername() != null) {
             userRepository.findByUsername(req.getRequestedByUsername()).ifPresent(u -> {

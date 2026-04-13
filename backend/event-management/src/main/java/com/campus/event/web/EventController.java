@@ -19,7 +19,9 @@ import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDateTime;
+import java.time.LocalTime;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 @RestController
@@ -77,7 +79,11 @@ public class EventController {
         com.campus.event.domain.EventTimingModel timingModel = com.campus.event.domain.EventTimingModel.SINGLE_DAY;
         if (request.getTimingModel() != null && !request.getTimingModel().isBlank()) {
             try {
-                timingModel = com.campus.event.domain.EventTimingModel.valueOf(request.getTimingModel());
+                String model = request.getTimingModel().trim().toUpperCase();
+                if ("OVERNIGHT".equals(model) || "CONTINUOUS_MULTI_DAY".equals(model)) {
+                    model = "MULTI_DAY_CONTINUOUS";
+                }
+                timingModel = com.campus.event.domain.EventTimingModel.valueOf(model);
             } catch (IllegalArgumentException e) {
                 return ResponseEntity.badRequest().body("Invalid timingModel: " + request.getTimingModel());
             }
@@ -120,10 +126,13 @@ public class EventController {
             return ResponseEntity.badRequest().body("Events cannot span more than 30 consecutive days.");
         }
 
-        // Building hours validation — strategy depends on timing model
-        if (timingModel == com.campus.event.domain.EventTimingModel.MULTI_DAY_CONTINUOUS || timingModel == com.campus.event.domain.EventTimingModel.SINGLE_DAY) {
-            if (!buildingTimetableService.isBookingWithinBuildingHours(building.getId(), request.getStart(), request.getEnd())) {
-                return ResponseEntity.badRequest().body("Event time is outside building operating hours.");
+        // Building hours validation must be slot-based (EventTimeSlot is source of truth)
+        if (timingModel == com.campus.event.domain.EventTimingModel.MULTI_DAY_CONTINUOUS
+                || timingModel == com.campus.event.domain.EventTimingModel.SINGLE_DAY) {
+            java.util.List<com.campus.event.domain.EventTimeSlot> generatedSlots =
+                    buildContinuousDayBoundedSlots(request.getStart(), request.getEnd());
+            if (!validateSlotsAgainstBuildingHours(building.getId(), timingModel, generatedSlots)) {
+                return ResponseEntity.badRequest().body("One or more event days are outside building operating hours.");
             }
         }
 
@@ -134,11 +143,8 @@ public class EventController {
 
         // FLEXIBLE: validate each explicit slot individually against building hours
         if (timingModel == com.campus.event.domain.EventTimingModel.FLEXIBLE && explicitSlots != null) {
-            for (com.campus.event.domain.EventTimeSlot slot : explicitSlots) {
-                if (!buildingTimetableService.isBookingWithinBuildingHours(building.getId(), slot.getSlotStart(), slot.getSlotEnd())) {
-                    return ResponseEntity.badRequest().body(
-                        "Time slot " + slot.getSlotStart() + " – " + slot.getSlotEnd() + " is outside building operating hours.");
-                }
+            if (!validateSlotsAgainstBuildingHours(building.getId(), timingModel, explicitSlots)) {
+                return ResponseEntity.badRequest().body("One or more event days are outside building operating hours.");
             }
         }
 
@@ -162,8 +168,7 @@ public class EventController {
                     slotEnd = LocalDateTime.of(cur, dailyEnd);
                 }
                 if (!buildingTimetableService.isBookingWithinBuildingHours(building.getId(), slotStart, slotEnd)) {
-                    return ResponseEntity.badRequest().body(
-                        "Event time on " + cur + " (" + dailyStart + "–" + dailyEnd + ") is outside building operating hours.");
+                    return ResponseEntity.badRequest().body("One or more event days are outside building operating hours.");
                 }
                 cur = cur.plusDays(1);
             }
@@ -215,6 +220,29 @@ public class EventController {
             return m;
         }).collect(java.util.stream.Collectors.toList());
         return ResponseEntity.ok(body);
+    }
+
+    @GetMapping("/{eventId}/room-allocations")
+    @PreAuthorize("hasAnyRole('ADMIN','FACULTY','CLUB_ASSOCIATE','CENTRAL_ADMIN','BUILDING_ADMIN')")
+    public ResponseEntity<?> eventRoomAllocations(@PathVariable Long eventId,
+                                                  @AuthenticationPrincipal UserDetails principal) {
+        Event event = eventRepository.findById(eventId).orElse(null);
+        if (event == null) return ResponseEntity.notFound().build();
+
+        boolean isOwner = event.getCreatedBy() != null
+                && principal != null
+                && principal.getUsername() != null
+                && principal.getUsername().equals(event.getCreatedBy().getUsername());
+        boolean canViewAny = principal != null && (
+                principal.getAuthorities().stream().anyMatch(a -> "ROLE_ADMIN".equals(a.getAuthority()))
+                        || principal.getAuthorities().stream().anyMatch(a -> "ROLE_BUILDING_ADMIN".equals(a.getAuthority()))
+                        || principal.getAuthorities().stream().anyMatch(a -> "ROLE_CENTRAL_ADMIN".equals(a.getAuthority()))
+        );
+        if (!isOwner && !canViewAny) {
+            return ResponseEntity.status(403).body(Map.of("error", "Not allowed to view allocations for this event"));
+        }
+
+        return ResponseEntity.ok(eventService.getEventRoomAllocations(eventId));
     }
 
     @PutMapping("/{id}")
@@ -293,5 +321,59 @@ public class EventController {
         } catch (Exception e) {
             return ResponseEntity.badRequest().body(e.getMessage());
         }
+    }
+
+    private static List<com.campus.event.domain.EventTimeSlot> buildContinuousDayBoundedSlots(
+            LocalDateTime start, LocalDateTime end) {
+        java.util.List<com.campus.event.domain.EventTimeSlot> slots = new java.util.ArrayList<>();
+        if (start == null || end == null || !end.isAfter(start)) {
+            return slots;
+        }
+        java.time.LocalDate startDate = start.toLocalDate();
+        java.time.LocalDate endDate = end.toLocalDate();
+        if (startDate.equals(endDate)) {
+            slots.add(new com.campus.event.domain.EventTimeSlot(null, start, end, 0));
+            return slots;
+        }
+
+        int dayIndex = 0;
+        java.time.LocalDate cur = startDate;
+        while (!cur.isAfter(endDate)) {
+            LocalDateTime slotStart;
+            LocalDateTime slotEnd;
+            if (cur.equals(startDate)) {
+                slotStart = start;
+                slotEnd = LocalDateTime.of(cur, LocalTime.of(23, 59, 59));
+            } else if (cur.equals(endDate)) {
+                slotStart = LocalDateTime.of(cur, LocalTime.MIDNIGHT);
+                slotEnd = end;
+            } else {
+                slotStart = LocalDateTime.of(cur, LocalTime.MIDNIGHT);
+                slotEnd = LocalDateTime.of(cur, LocalTime.of(23, 59, 59));
+            }
+            slots.add(new com.campus.event.domain.EventTimeSlot(null, slotStart, slotEnd, dayIndex++));
+            cur = cur.plusDays(1);
+        }
+        return slots;
+    }
+
+    private boolean validateSlotsAgainstBuildingHours(Long buildingId,
+                                                      com.campus.event.domain.EventTimingModel timingModel,
+                                                      List<com.campus.event.domain.EventTimeSlot> slots) {
+        if (slots == null || slots.isEmpty()) return true;
+        // Overnight / continuous mode: allow midnight boundary crossing without rejecting the whole event.
+        // Enforce only that the first slot starts within hours and the last slot ends within hours.
+        if (timingModel == com.campus.event.domain.EventTimingModel.MULTI_DAY_CONTINUOUS) {
+            com.campus.event.domain.EventTimeSlot first = slots.get(0);
+            com.campus.event.domain.EventTimeSlot last = slots.get(slots.size() - 1);
+            return buildingTimetableService.isTimeWithinBuildingHours(buildingId, first.getSlotStart())
+                    && buildingTimetableService.isTimeWithinBuildingHours(buildingId, last.getSlotEnd());
+        }
+        for (com.campus.event.domain.EventTimeSlot slot : slots) {
+            if (!buildingTimetableService.isBookingWithinBuildingHours(buildingId, slot.getSlotStart(), slot.getSlotEnd())) {
+                return false;
+            }
+        }
+        return true;
     }
 }

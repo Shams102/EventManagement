@@ -16,7 +16,6 @@ import CreateEvent from '../views/CreateEvent'
 import EventEdit from '../views/EventEdit'
 import AdminRoomApprovals from '../views/AdminRoomApprovals'
 import AdminBroadcast from '../views/AdminBroadcast'
-import StyleGuide from '../views/StyleGuide'
 import NotificationsPage from '../views/NotificationsPage'
 import ThreadChatPage from '../views/ThreadChatPage'
 import ForgotPassword from '../views/ForgotPassword'
@@ -51,7 +50,6 @@ function AppRoutes() {
         <Route path="/forgot-password" element={<ForgotPassword />} />
         <Route path="/reset-password" element={<ResetPassword />} />
         <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
-        <Route path="/style-guide" element={<StyleGuide />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </AnimatePresence>

@@ -9,10 +9,47 @@ export default function Bookings() {
 
   useEffect(() => {
     api.get('/api/room-requests/mine')
-      .then(res => setBookings(res.data || []))
+      .then(async (res) => {
+        const list = res.data || []
+        const eventIds = Array.from(new Set(
+          list.map(b => Number(b.eventId)).filter(n => !Number.isNaN(n) && n > 0)
+        ))
+        let allocations = {}
+        if (eventIds.length > 0) {
+          const pairs = await Promise.allSettled(eventIds.map(async (eventId) => {
+            const a = await api.get(`/api/events/${eventId}/room-allocations`)
+            return [eventId, a.data]
+          }))
+          pairs.forEach(p => {
+            if (p.status === 'fulfilled' && Array.isArray(p.value)) {
+              allocations[Number(p.value[0])] = p.value[1]
+            }
+          })
+        }
+        const withAlloc = list.map(b => ({ ...b, _allocation: allocations[Number(b.eventId)] || null }))
+        setBookings(withAlloc)
+      })
       .catch(() => setError('Failed to load bookings'))
       .finally(() => setLoading(false))
   }, [])
+
+  const renderAllocated = (booking) => {
+    const slots = Array.isArray(booking?._allocation?.slots) ? booking._allocation.slots : []
+    if (slots.length === 0) return booking.allocatedRoom || 'TBD'
+    if (slots.length === 1) {
+      const s = slots[0]
+      return s?.allocated ? (s?.roomName || s?.room || 'TBD') : 'TBD'
+    }
+    return (
+      <div className="mt-1 space-y-1">
+        {slots.map((s, i) => (
+          <div key={`${booking.id}-slot-${i}`}>
+            Day {(s?.dayIndex != null ? s.dayIndex + 1 : i + 1)}: {s?.allocated ? (s?.roomName || s?.room || 'TBD') : 'TBD'}
+          </div>
+        ))}
+      </div>
+    )
+  }
 
   const getStatusColor = (status) => {
     switch (status) {
@@ -97,7 +134,7 @@ export default function Bookings() {
               <div className="flex items-start justify-between mb-4">
                 <div>
                   <h3 className="text-lg font-semibold text-[#E5E7EB]">{booking.eventTitle || 'Meeting'}</h3>
-                  <p className="text-[#9CA3AF] text-sm">Allocated: {booking.allocatedRoom || 'TBD'}</p>
+                  <p className="text-[#9CA3AF] text-sm">Allocated: {renderAllocated(booking)}</p>
                 </div>
                 <span className={`text-xs px-2 py-1 rounded-full ${getStatusColor((booking.status || '').toLowerCase())}`}>
                   {(booking.status || '').toUpperCase()}

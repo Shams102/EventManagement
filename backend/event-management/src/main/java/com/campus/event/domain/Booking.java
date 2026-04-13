@@ -1,7 +1,6 @@
 package com.campus.event.domain;
 
 import jakarta.persistence.*;
-import jakarta.validation.constraints.Future;
 import jakarta.validation.constraints.NotNull;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -35,7 +34,6 @@ public class Booking {
     private LocalDateTime startTime;
 
     @NotNull
-    @Future
     @Column(name = "end_time")
     private LocalDateTime endTime;
 

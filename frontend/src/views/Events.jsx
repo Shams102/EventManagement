@@ -15,11 +15,12 @@ export default function Events() {
   const [loading, setLoading] = useState(true)
   const [registeredEventIds, setRegisteredEventIds] = useState(() => new Set())
   const [selectedEvent, setSelectedEvent] = useState(null)
+  const [eventAllocations, setEventAllocations] = useState({})
   const { hasRole, clubId, user } = useAuth()
   const navigate = useNavigate()
 
   useEffect(() => {
-    api.get('/api/public/events').then((res) => {
+    api.get('/api/public/events').then(async (res) => {
       const mapped = (res.data || []).map(e => ({ 
         id: e.id, 
         title: e.title, 
@@ -31,15 +32,44 @@ export default function Events() {
           category: e.category || e.type || 'default',
         },
       }))
+      const list = res.data || []
       setEvents(mapped)
-      setEventList(res.data || [])
+      setEventList(list)
+      const ids = list.map(e => Number(e.id)).filter(n => !Number.isNaN(n) && n > 0)
+      if (ids.length > 0) {
+        const allocPairs = await Promise.allSettled(ids.map(async (id) => {
+          const r = await api.get(`/api/events/${id}/room-allocations`)
+          return [id, r.data]
+        }))
+        const map = {}
+        allocPairs.forEach((p) => {
+          if (p.status === 'fulfilled' && Array.isArray(p.value)) {
+            map[Number(p.value[0])] = p.value[1]
+          }
+        })
+        setEventAllocations(map)
+      } else {
+        setEventAllocations({})
+      }
     }).catch(() => {
       setEvents([])
       setEventList([])
+      setEventAllocations({})
     }).finally(() => {
       setLoading(false)
     })
   }, [])
+
+  const formatAllocation = (eventId, fallbackLocation) => {
+    const alloc = eventAllocations[Number(eventId)]
+    const slots = Array.isArray(alloc?.slots) ? alloc.slots : []
+    if (slots.length === 0) return fallbackLocation || 'TBD'
+    if (slots.length === 1) {
+      const s = slots[0]
+      return s?.allocated ? (s?.roomName || s?.room || 'TBD') : 'TBD'
+    }
+    return 'Multiple rooms assigned'
+  }
 
   useEffect(() => {
     if (!user) {
@@ -178,6 +208,7 @@ export default function Events() {
       <EventPreviewModal
         isOpen={!!selectedEvent}
         event={selectedEvent}
+        allocation={selectedEvent ? eventAllocations[Number(selectedEvent.id)] : null}
         eligibilityText={getEligibilityText(selectedEvent)}
         onClose={() => setSelectedEvent(null)}
         onRegister={() => {
@@ -240,7 +271,7 @@ export default function Events() {
                   </div>
                   <div className="flex items-center text-sm text-gray-500">
                     <span className="mr-2">📍</span>
-                    <span>Location: {event.location || 'TBD'}</span>
+                    <span>Location: {formatAllocation(event.id, event.location)}</span>
                   </div>
                   <div className="flex items-center text-sm text-gray-500">
                     <span className="mr-2">👥</span>

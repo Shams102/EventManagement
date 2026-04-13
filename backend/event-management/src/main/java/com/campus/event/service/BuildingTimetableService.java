@@ -52,4 +52,18 @@ public class BuildingTimetableService {
         return rows.stream().anyMatch(r ->
                 !r.getStartTime().isAfter(segStart) && !r.getEndTime().isBefore(segEnd));
     }
+
+    /**
+     * Checks whether a single time point is within configured opening windows
+     * for that day. If no timetable exists for the day, returns true.
+     */
+    @Transactional(readOnly = true)
+    public boolean isTimeWithinBuildingHours(Long buildingId, LocalDateTime dateTime) {
+        if (buildingId == null || dateTime == null) return true;
+        List<BuildingTimetable> rows = buildingTimetableRepository
+                .findByBuilding_IdAndDayOfWeekOrderByStartTimeAsc(buildingId, dateTime.getDayOfWeek());
+        if (rows.isEmpty()) return true;
+        LocalTime t = dateTime.toLocalTime();
+        return rows.stream().anyMatch(r -> !r.getStartTime().isAfter(t) && !r.getEndTime().isBefore(t));
+    }
 }

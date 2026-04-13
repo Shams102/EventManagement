@@ -45,7 +45,7 @@ export default function Layout({ children }) {
   }, [showPendingCard])
   
   return (
-    <div className="min-h-screen bg-[#0B0F19] text-[#E5E7EB]">
+    <div className="min-h-screen flex flex-col bg-[#0B0F19] text-[#E5E7EB]">
       {/* Header */}
       <header className="bg-[#0B0F19]/95 backdrop-blur border-b border-[#1F2937] sticky top-0">
         <Container className="py-3">
@@ -171,22 +171,15 @@ export default function Layout({ children }) {
       )}
       
       {/* Main Content */}
-      <main>
+      <main className="flex-grow">
         <Container className="py-8">
           {children}
         </Container>
       </main>
       
       {/* Footer */}
-      <footer className="bg-[#0B0F19] border-t border-[#1F2937] mt-12">
-        <Container className="py-8">
-          <div className="text-center text-slate-400">
-            <p>&copy; 2024 EventSphere. Built with React &amp; Spring Boot.</p>
-            <div className="mt-2 text-sm">
-              <a href="/style-guide" className="nav-link">Style guide</a>
-            </div>
-          </div>
-        </Container>
+      <footer className="text-center py-4 text-sm text-gray-500">
+        © 2026 EventSphere. Built with React & Spring Boot.
       </footer>
     </div>
   )

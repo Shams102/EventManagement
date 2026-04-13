@@ -29,6 +29,9 @@ export default function RoomBooking() {
   const [roomConflicts, setRoomConflicts] = useState([])
   const [roomWindowAvailability, setRoomWindowAvailability] = useState({})
   const [roomWindowLoading, setRoomWindowLoading] = useState(false)
+  // Aggregated per-slot event availability (new)
+  const [eventAvailability, setEventAvailability] = useState([])
+  const [eventAvailLoading, setEventAvailLoading] = useState(false)
   
   // Fixed time slots for meeting mode
   const timeSlots = [
@@ -95,13 +98,33 @@ export default function RoomBooking() {
     loadBaseData()
   }, [])
 
-  const refreshAvailabilityForEvent = (evId) => {
+  const refreshAvailabilityForEvent = async (evId) => {
     const ev = events.find(e => e.id === Number(evId))
     if (!ev) return
+    // Try the new aggregated per-slot endpoint first
+    try {
+      setEventAvailLoading(true)
+      const res = await api.get('/api/rooms/event-availability', { params: { eventId: Number(evId) } })
+      const data = Array.isArray(res.data) ? res.data : []
+      if (data.length > 0) {
+        setEventAvailability(data)
+        // Build a backward-compatible roomWindowAvailability map from aggregated data
+        const map = {}
+        data.forEach(r => { map[Number(r.roomId)] = r.fullyAvailable })
+        setRoomWindowAvailability(map)
+        setEventAvailLoading(false)
+        return
+      }
+    } catch {
+      // Fallback to old window-based check
+    } finally {
+      setEventAvailLoading(false)
+    }
+    // Fallback: old window-based availability
+    setEventAvailability([])
     const start = ev.startTime
     const end = ev.endTime
-    if (!start || !end) return
-    loadWindowAvailability(start, end)
+    if (start && end) loadWindowAvailability(start, end)
   }
 
   const toLocalDateTimeSeconds = (v) => {
@@ -241,27 +264,29 @@ export default function RoomBooking() {
   }
 
   useEffect(() => {
-    const shouldUseWindow =
-      (mode === 'event') ||
-      (mode === 'meeting' && !useFixedSlotsForMeeting)
-
-    if (!shouldUseWindow) {
-      setRoomWindowAvailability({})
-      return
-    }
-
     if (mode === 'event') {
-      const ev = events.find(e => e.id === Number(eventId))
-      if (ev?.startTime && ev?.endTime) {
-        loadWindowAvailability(ev.startTime, ev.endTime)
+      // Use new aggregated event availability
+      if (eventId) {
+        refreshAvailabilityForEvent(eventId)
+      } else {
+        setEventAvailability([])
+        setRoomWindowAvailability({})
       }
       return
     }
 
-    if (meetingStart && meetingEnd) {
-      const start = toLocalDateTimeSeconds(meetingStart)
-      const end = toLocalDateTimeSeconds(meetingEnd)
-      loadWindowAvailability(start, end)
+    // Meeting mode
+    setEventAvailability([])
+    if (!useFixedSlotsForMeeting) {
+      if (meetingStart && meetingEnd) {
+        const start = toLocalDateTimeSeconds(meetingStart)
+        const end = toLocalDateTimeSeconds(meetingEnd)
+        loadWindowAvailability(start, end)
+      } else {
+        setRoomWindowAvailability({})
+      }
+    } else {
+      setRoomWindowAvailability({})
     }
   }, [mode, eventId, meetingStart, meetingEnd, events, useFixedSlotsForMeeting])
 
@@ -373,9 +398,34 @@ export default function RoomBooking() {
     }
   }
 
-  const filteredRooms = selectedBuildingId
+  // In event mode with eventAvailability, use that (pre-sorted by server); otherwise use rooms list
+  const baseFilteredRooms = selectedBuildingId
     ? rooms.filter(r => String(r.buildingId) === String(selectedBuildingId))
     : []
+
+  // Build a lookup from eventAvailability for the selected building
+  const eventAvailMap = {}
+  eventAvailability.forEach(r => { eventAvailMap[Number(r.roomId)] = r })
+
+  const eventAvailabilityMeta = (roomId) => {
+    const ea = eventAvailMap[Number(roomId)]
+    if (!ea) return null
+    if (ea.fullyAvailable) return { label: ' — ✅ Fully Available', disabled: false }
+    if (ea.partiallyAvailable) return { label: ` — ⚠️ Available on ${ea.availableDays}/${ea.totalDays} days`, disabled: false }
+    return { label: ' — ❌ Unavailable', disabled: true }
+  }
+
+  // Sort rooms: fully available first, partially second, unavailable last (only in event mode)
+  const filteredRooms = mode === 'event' && eventAvailability.length > 0
+    ? [...baseFilteredRooms].sort((a, b) => {
+        const ea = eventAvailMap[Number(a.id)]
+        const eb = eventAvailMap[Number(b.id)]
+        const rankA = ea ? (ea.fullyAvailable ? 0 : ea.partiallyAvailable ? 1 : 2) : 2
+        const rankB = eb ? (eb.fullyAvailable ? 0 : eb.partiallyAvailable ? 1 : 2) : 2
+        if (rankA !== rankB) return rankA - rankB
+        return (a.capacity || 0) - (b.capacity || 0)
+      })
+    : baseFilteredRooms
   const selectedRoomInfo = rooms.find(room => room.id === Number(pref1))
 
   const isErrorMessage = (m) => {
@@ -507,6 +557,9 @@ export default function RoomBooking() {
                       <option key={ev.id} value={ev.id}>{ev.title}</option>
                     ))}
                   </select>
+                  <p className="text-xs text-[#9CA3AF] mt-1">
+                    Overnight and multi-day events are split into day-wise slots automatically.
+                  </p>
                 </div>
               ) : (
                 <>
@@ -630,13 +683,21 @@ export default function RoomBooking() {
                   >
                     <option value="">{selectedBuildingId ? 'Choose a room...' : 'Select a building first...'}</option>
                     {filteredRooms.map(room => {
+                      const eventMeta = mode === 'event' ? eventAvailabilityMeta(room.id) : null
                       const ok = roomWindowAvailability[Number(room.id)]
                       const hasWindow = Object.keys(roomWindowAvailability).length > 0
-                      const disabled = hasWindow ? !ok : false
+                      let label = ''
+                      let isDisabled = false
+                      if (eventMeta) {
+                        label = eventMeta.label
+                        isDisabled = eventMeta.disabled
+                      } else if (hasWindow) {
+                        label = ok ? ' — AVAILABLE' : ' — OCCUPIED'
+                        isDisabled = !ok
+                      }
                       return (
-                        <option key={room.id} value={room.id} disabled={disabled}>
-                          {room.name}{room.location ? ` - ${room.location}` : ''} (Capacity: {room.capacity})
-                          {hasWindow ? (ok ? ' — AVAILABLE' : ' — OCCUPIED') : ''}
+                        <option key={room.id} value={room.id} disabled={isDisabled}>
+                          {room.name}{room.location ? ` - ${room.location}` : ''} (Capacity: {room.capacity}){label}
                         </option>
                       )
                     })}
@@ -669,13 +730,15 @@ export default function RoomBooking() {
                       >
                         <option value="">{selectedBuildingId ? 'Choose a room...' : 'Select a building first...'}</option>
                         {filteredRooms.map(room => {
+                          const eventMeta = mode === 'event' ? eventAvailabilityMeta(room.id) : null
                           const ok = roomWindowAvailability[Number(room.id)]
                           const hasWindow = Object.keys(roomWindowAvailability).length > 0
-                          const disabled = hasWindow ? !ok : false
+                          const disabled = eventMeta ? eventMeta.disabled : (hasWindow ? !ok : false)
+                          const label = eventMeta ? eventMeta.label : (hasWindow ? (ok ? ' — AVAILABLE' : ' — OCCUPIED') : '')
                           return (
                             <option key={room.id} value={room.id} disabled={disabled}>
                               {room.name}{room.location ? ` - ${room.location}` : ''} (Capacity: {room.capacity})
-                              {hasWindow ? (ok ? ' — AVAILABLE' : ' — OCCUPIED') : ''}
+                              {label}
                             </option>
                           )
                         })}
@@ -693,13 +756,15 @@ export default function RoomBooking() {
                       >
                         <option value="">{selectedBuildingId ? 'Choose a room...' : 'Select a building first...'}</option>
                         {filteredRooms.map(room => {
+                          const eventMeta = mode === 'event' ? eventAvailabilityMeta(room.id) : null
                           const ok = roomWindowAvailability[Number(room.id)]
                           const hasWindow = Object.keys(roomWindowAvailability).length > 0
-                          const disabled = hasWindow ? !ok : false
+                          const disabled = eventMeta ? eventMeta.disabled : (hasWindow ? !ok : false)
+                          const label = eventMeta ? eventMeta.label : (hasWindow ? (ok ? ' — AVAILABLE' : ' — OCCUPIED') : '')
                           return (
                             <option key={room.id} value={room.id} disabled={disabled}>
                               {room.name}{room.location ? ` - ${room.location}` : ''} (Capacity: {room.capacity})
-                              {hasWindow ? (ok ? ' — AVAILABLE' : ' — OCCUPIED') : ''}
+                              {label}
                             </option>
                           )
                         })}
@@ -766,14 +831,54 @@ export default function RoomBooking() {
                     <span>{selectedRoomInfo.capacity} seats</span>
                   </div>
                 </div>
-                {Object.keys(roomWindowAvailability).length > 0 && (
-                  <div className="text-sm">
-                    Availability in selected window:{' '}
-                    <span className={roomWindowAvailability[Number(selectedRoomInfo.id)] ? 'text-emerald-400 font-semibold' : 'text-rose-400 font-semibold'}>
-                      {roomWindowAvailability[Number(selectedRoomInfo.id)] ? '✓ AVAILABLE' : '✗ OCCUPIED'}
-                    </span>
-                  </div>
-                )}
+                {/* Aggregated event availability for selected room */}
+                {(() => {
+                  const ea = eventAvailMap[Number(selectedRoomInfo.id)]
+                  if (ea) {
+                    return (
+                      <div className="space-y-3">
+                        <div className="text-sm">
+                          Event availability:{' '}
+                          {ea.fullyAvailable ? (
+                            <span className="text-emerald-400 font-semibold">✅ Fully Available ({ea.availableDays}/{ea.totalDays} days)</span>
+                          ) : ea.partiallyAvailable ? (
+                            <span className="text-amber-400 font-semibold">⚠️ Partially Available ({ea.availableDays}/{ea.totalDays} days)</span>
+                          ) : (
+                            <span className="text-rose-400 font-semibold">❌ Unavailable (0/{ea.totalDays} days)</span>
+                          )}
+                        </div>
+                        {/* Per-day breakdown */}
+                        {ea.perDay && ea.perDay.length > 1 && (
+                          <div className="p-3 rounded-lg" style={{ background: '#0F172A', border: '1px solid #1F2937' }}>
+                            <div className="text-xs font-semibold text-[#9CA3AF] mb-2">Day-wise Availability</div>
+                            <div className="space-y-1">
+                              {ea.perDay.map((d, i) => (
+                                <div key={i} className="flex items-center justify-between text-xs">
+                                  <span className="text-[#E5E7EB]">Day {(d.dayIndex != null ? d.dayIndex + 1 : i + 1)}: {d.date}</span>
+                                  <span className={d.available ? 'text-emerald-400 font-medium' : 'text-rose-400 font-medium'}>
+                                    {d.available ? '✓ Available' : '✗ Occupied'}
+                                  </span>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    )
+                  }
+                  // Fallback to old window availability
+                  if (Object.keys(roomWindowAvailability).length > 0) {
+                    return (
+                      <div className="text-sm">
+                        Availability in selected window:{' '}
+                        <span className={roomWindowAvailability[Number(selectedRoomInfo.id)] ? 'text-emerald-400 font-semibold' : 'text-rose-400 font-semibold'}>
+                          {roomWindowAvailability[Number(selectedRoomInfo.id)] ? '✓ AVAILABLE' : '✗ OCCUPIED'}
+                        </span>
+                      </div>
+                    )
+                  }
+                  return null
+                })()}
               </div>
             )}
           </div>

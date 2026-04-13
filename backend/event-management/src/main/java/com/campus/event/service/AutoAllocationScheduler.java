@@ -101,4 +101,4 @@ public class AutoAllocationScheduler {
         if (e != null && e.getEndTime() != null) return e.getEndTime();
         return r.getMeetingEnd();
     }
-}
+}
