@@ -97,62 +97,95 @@ export default function Dashboard() {
 
   const renderEventRoomAllocation = (ev) => {
     const alloc = eventRoomAllocations[Number(ev.id)]
-    const rawSlots = Array.isArray(alloc?.slots) ? alloc.slots : []
-    // Sort slots by date to guarantee display order
-    const slots = [...rawSlots].sort((a, b) => {
-      const da = a?.date || ''; const db = b?.date || ''
-      return da < db ? -1 : da > db ? 1 : 0
-    })
-    if (slots.length === 0) return <span>📍 TBD</span>
-
-    const allocated = slots.filter(s => s && s.allocated)
-    if (allocated.length === 0) return <span>📍 TBD</span>
-
-    if (slots.length === 1) {
-      return <span>📍 {allocated[0]?.roomName || 'TBD'}</span>
+    
+    let validSlots = []
+    if (alloc && Array.isArray(alloc.slots)) {
+      validSlots = alloc.slots.filter(s => s && s.allocated && s.roomName)
     }
 
-    const title = 'Rooms allocated per day based on admin approval'
-    return (
-      <div title={title}>
-        {alloc?.partiallyAllocated
-          ? <div className="text-amber-400">📍 Rooms (Partial):</div>
-          : <div>📍 Rooms:</div>}
-        <div className="mt-1 space-y-1">
-          {slots.map((s, i) => (
-            <div key={`${ev.id}-slot-${i}`}>
-              📍 Day {(s?.dayIndex != null ? s.dayIndex + 1 : i + 1)} → {s?.allocated ? (s?.roomName || 'TBD') : 'TBD'}
-            </div>
-          ))}
+    if (validSlots.length > 0) {
+      const slots = [...validSlots].sort((a, b) => {
+        const da = a?.date || ''; const db = b?.date || ''
+        return da < db ? -1 : da > db ? 1 : 0
+      })
+
+      if (slots.length === 1) {
+        return <span>📍 {slots[0].roomName.trim()}</span>
+      }
+
+      const allSameRoom = slots.every(a => a.roomName.trim() === slots[0].roomName.trim())
+      if (allSameRoom) {
+         return <span>📍 {slots[0].roomName.trim()} (All days)</span>
+      }
+
+      const title = 'Rooms allocated per day based on admin approval'
+      return (
+        <div title={title}>
+          {alloc.partiallyAllocated
+            ? <div className="text-amber-400">📍 Rooms (Partial):</div>
+            : <div>📍 Rooms:</div>}
+          <div className="mt-1 space-y-1">
+            {slots.map((s, i) => (
+              <div key={`${ev.id}-slot-${i}`}>
+                📍 Day {(s.dayIndex != null ? s.dayIndex + 1 : i + 1)} → {s.roomName.trim()}
+              </div>
+            ))}
+          </div>
         </div>
-      </div>
-    )
+      )
+    }
+
+    if (ev.location && ev.location !== 'TBD' && ev.location.trim() !== '') {
+      return <span>📍 {ev.location}</span>
+    }
+
+    return <span>📍 TBD</span>
   }
 
   const renderBookingAllocation = (booking) => {
     const eventId = Number(booking?.eventId)
+    const isApprovedOrConfirmed = booking?.status === 'APPROVED' || booking?.status === 'CONFIRMED'
+    
     if (!eventId) return (booking?.allocatedRoom || 'TBD')
+    
     const alloc = eventRoomAllocations[eventId]
-    const rawSlots = Array.isArray(alloc?.slots) ? alloc.slots : []
-    // Sort slots by date to guarantee display order
-    const slots = [...rawSlots].sort((a, b) => {
-      const da = a?.date || ''; const db = b?.date || ''
-      return da < db ? -1 : da > db ? 1 : 0
-    })
-    if (slots.length === 0) return (booking?.allocatedRoom || 'TBD')
-    if (slots.length === 1) {
-      const s = slots[0]
-      return s?.allocated ? (s?.roomName || s?.room || 'TBD') : 'TBD'
+    
+    let validSlots = []
+    if (alloc && Array.isArray(alloc.slots)) {
+      validSlots = alloc.slots.filter(s => s && s.allocated && s.roomName)
     }
-    return (
-      <div className="mt-1 space-y-1">
-        {slots.map((s, i) => (
-          <div key={`${booking.id}-alloc-${i}`} className="text-xs text-gray-500">
-            Day {(s?.dayIndex != null ? s.dayIndex + 1 : i + 1)} → {s?.allocated ? (s?.roomName || s?.room || 'TBD') : 'TBD'}
-          </div>
-        ))}
-      </div>
-    )
+
+    if (validSlots.length > 0) {
+      const slots = [...validSlots].sort((a, b) => {
+        const da = a?.date || ''; const db = b?.date || ''
+        return da < db ? -1 : da > db ? 1 : 0
+      })
+
+      if (slots.length === 1) {
+        return slots[0].roomName.trim()
+      }
+
+      const allSameRoom = slots.every(a => a.roomName.trim() === slots[0].roomName.trim())
+      if (allSameRoom) {
+         return `${slots[0].roomName.trim()} (All days)`
+      }
+
+      return (
+        <div className="mt-1 space-y-1">
+          {slots.map((s, i) => (
+            <div key={`${booking.id}-alloc-${i}`} className="text-xs text-gray-500">
+              Day {(s.dayIndex != null ? s.dayIndex + 1 : i + 1)} → {s.roomName.trim()}
+            </div>
+          ))}
+        </div>
+      )
+    }
+
+    if (booking?.allocatedRoom && booking.allocatedRoom !== 'TBD' && booking.allocatedRoom.trim() !== '') {
+      return booking.allocatedRoom
+    }
+
+    return 'TBD'
   }
 
   const now = new Date()

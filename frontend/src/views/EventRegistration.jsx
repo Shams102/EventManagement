@@ -65,22 +65,34 @@ export default function EventRegistration() {
   const registrationDeadlineStr = event && event.startTime ? new Date(new Date(event.startTime).getTime() - 2 * 24 * 60 * 60 * 1000).toLocaleString() : ''
 
   const renderLocation = () => {
-    const rawSlots = Array.isArray(allocation?.slots) ? allocation.slots : []
-    // Sort slots by date to guarantee display order
-    const slots = [...rawSlots].sort((a, b) => {
-      const da = a?.date || ''; const db = b?.date || ''
-      return da < db ? -1 : da > db ? 1 : 0
-    })
-    if (slots.length === 0) return event?.location || 'TBD'
-    const allocated = slots.filter(s => s && s.allocated)
-    if (allocated.length === 0) return event?.location || 'TBD'
-    if (slots.length === 1) {
-      return allocated[0]?.roomName || allocated[0]?.room || event?.location || 'TBD'
+    let validSlots = []
+    if (allocation && Array.isArray(allocation.slots)) {
+      validSlots = allocation.slots.filter(s => s && s.allocated && s.roomName)
     }
-    // Multi-slot: show per-day rooms
-    return slots.map((s, i) => (
-      `Day ${s?.dayIndex != null ? s.dayIndex + 1 : i + 1} \u2192 ${s?.allocated ? (s?.roomName || s?.room || 'TBD') : 'TBD'}`
-    )).join(', ')
+
+    if (validSlots.length > 0) {
+      const slots = [...validSlots].sort((a, b) => {
+        const da = a?.date || ''; const db = b?.date || ''
+        return da < db ? -1 : da > db ? 1 : 0
+      })
+
+      if (slots.length === 1) {
+        return slots[0].roomName.trim()
+      }
+      
+      const allSameRoom = slots.every(a => a.roomName.trim() === slots[0].roomName.trim())
+      if (allSameRoom) {
+        return `${slots[0].roomName.trim()} (All days)`
+      }
+      
+      return slots.map((s, i) => `Day ${s.dayIndex != null ? s.dayIndex + 1 : i + 1} → ${s.roomName.trim()}`).join(', ')
+    }
+
+    if (event?.location && event.location !== 'TBD' && event.location.trim() !== '') {
+      return event.location
+    }
+
+    return 'TBD'
   }
 
   const onSubmit = async (e) => {

@@ -2,28 +2,43 @@ import React from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
 
 export default function EventPreviewModal({ isOpen, event, allocation, eligibilityText, onClose, onRegister }) {
-  const rawSlots = Array.isArray(allocation?.slots) ? allocation.slots : []
-  // Sort slots by date to guarantee display order
-  const slots = [...rawSlots].sort((a, b) => {
-    const da = a?.date || ''; const db = b?.date || ''
-    return da < db ? -1 : da > db ? 1 : 0
-  })
   const renderLocation = () => {
-    if (slots.length === 0) return (event?.location || 'TBD')
-    const allocated = slots.filter(s => s && s.allocated)
-    if (allocated.length === 0) return (event?.location || 'TBD')
-    if (slots.length === 1) {
-      return allocated[0]?.roomName || allocated[0]?.room || 'TBD'
+    let validSlots = []
+    if (allocation && Array.isArray(allocation.slots)) {
+      validSlots = allocation.slots.filter(s => s && s.allocated && s.roomName)
     }
-    return (
-      <div className="space-y-1">
-        {slots.map((s, i) => (
-          <div key={`modal-slot-${i}`}>
-            Day {(s?.dayIndex != null ? s.dayIndex + 1 : i + 1)} → {s?.allocated ? (s?.roomName || s?.room || 'TBD') : 'TBD'}
-          </div>
-        ))}
-      </div>
-    )
+
+    if (validSlots.length > 0) {
+      const slots = [...validSlots].sort((a, b) => {
+        const da = a?.date || ''; const db = b?.date || ''
+        return da < db ? -1 : da > db ? 1 : 0
+      })
+
+      if (slots.length === 1) {
+        return slots[0].roomName.trim()
+      }
+      
+      const allSameRoom = slots.every(a => a.roomName.trim() === slots[0].roomName.trim())
+      if (allSameRoom) {
+        return `${slots[0].roomName.trim()} (All days)`
+      }
+      
+      return (
+        <div className="space-y-1">
+          {slots.map((s, i) => (
+            <div key={`modal-slot-${i}`}>
+              Day {(s.dayIndex != null ? s.dayIndex + 1 : i + 1)} → {s.roomName.trim()}
+            </div>
+          ))}
+        </div>
+      )
+    }
+
+    if (event?.location && event.location !== 'TBD' && event.location.trim() !== '') {
+      return event.location
+    }
+
+    return 'TBD'
   }
   return (
     <AnimatePresence>
