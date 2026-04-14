@@ -365,5 +365,68 @@ public class EventService {
         // Delete the event
         eventRepository.delete(event);
     }
+
+    /**
+     * Admin-level event deletion (CENTRAL_ADMIN only).
+     * Bypasses ownership, time, and room-allocation restrictions.
+     * Performs full cascade: bookings, room requests, slots, registrations,
+     * notification threads/messages/deliveries, and the event itself.
+     */
+    @Transactional
+    public void deleteEventByAdmin(Long eventId) {
+        Event event = eventRepository.findById(eventId)
+                .orElseThrow(() -> new IllegalArgumentException("Event not found"));
+
+        // Notify registered users about admin cancellation
+        List<EventRegistration> regs = eventRegistrationRepository.findByEvent_Id(eventId);
+        if (!regs.isEmpty()) {
+            String subject = "Event cancelled: " + event.getTitle();
+            String body = "The event \"" + event.getTitle() + "\" scheduled for " + event.getStartTime()
+                    + " has been cancelled by the administrator.";
+            for (EventRegistration r : regs) {
+                if (r.getUser() != null) {
+                    notificationService.notifyAllChannels(r.getUser(), subject, body);
+                }
+            }
+        }
+
+        // 1. Delete bookings linked via purpose token [EVT:{eventId}]
+        if (bookingRepository != null) {
+            bookingRepository.deleteByPurposeContaining("[EVT:" + eventId + "]");
+        }
+
+        // 2. Delete room booking requests
+        if (roomBookingRequestRepository != null) {
+            roomBookingRequestRepository.deleteByEvent_Id(eventId);
+        }
+
+        // 3. Delete event time slots
+        if (eventTimeSlotRepository != null) {
+            eventTimeSlotRepository.deleteByEvent_Id(eventId);
+        }
+
+        // 4. Delete event registrations
+        eventRegistrationRepository.deleteByEvent_Id(eventId);
+        registrationRepository.deleteByEvent_Id(eventId);
+
+        // 5. Delete notification-related records
+        if (threadMessageRepository != null) {
+            threadMessageRepository.deleteByThread_Event_Id(eventId);
+            threadMessageRepository.deleteByThread_Notification_Event_Id(eventId);
+        }
+        if (notificationThreadRepository != null) {
+            notificationThreadRepository.deleteByEvent_Id(eventId);
+            notificationThreadRepository.deleteByNotification_Event_Id(eventId);
+        }
+        if (notificationDeliveryRepository != null) {
+            notificationDeliveryRepository.deleteByNotification_Event_Id(eventId);
+        }
+        if (notificationMessageRepository != null) {
+            notificationMessageRepository.deleteByEvent_Id(eventId);
+        }
+
+        // 6. Delete the event itself
+        eventRepository.delete(event);
+    }
 }
 

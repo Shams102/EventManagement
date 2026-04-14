@@ -1,6 +1,7 @@
 package com.campus.event.web;
 
 import com.campus.event.repository.UserRepository;
+import com.campus.event.service.EventService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -16,9 +17,11 @@ import java.util.stream.Collectors;
 public class AdminController {
 
     private final UserRepository userRepository;
+    private final EventService eventService;
 
-    public AdminController(UserRepository userRepository) {
+    public AdminController(UserRepository userRepository, EventService eventService) {
         this.userRepository = userRepository;
+        this.eventService = eventService;
     }
 
     @GetMapping("/role-requests")
@@ -92,5 +95,22 @@ public class AdminController {
                     return ResponseEntity.ok("Updated clubId");
                 })
                 .orElse(ResponseEntity.notFound().build());
+    }
+
+    /**
+     * CENTRAL_ADMIN force-cancel: deletes event and ALL related data
+     * (bookings, room requests, slots, registrations, notifications).
+     */
+    @DeleteMapping("/events/{eventId}")
+    @PreAuthorize("hasRole('CENTRAL_ADMIN')")
+    public ResponseEntity<?> deleteEvent(@PathVariable Long eventId) {
+        try {
+            eventService.deleteEventByAdmin(eventId);
+            return ResponseEntity.ok("Event deleted successfully");
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.status(404).body(Map.of("error", "Event not found"));
+        } catch (Exception e) {
+            return ResponseEntity.status(500).body(Map.of("error", "Failed to delete event: " + e.getMessage()));
+        }
     }
 }

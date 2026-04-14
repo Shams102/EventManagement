@@ -201,10 +201,16 @@ export default function Dashboard() {
     return 'bg-gray-100 text-gray-800'
   }
 
+  const isCentralAdmin = hasRole('CENTRAL_ADMIN')
+
   const handleCancelEvent = async (eventId) => {
     setCancellingId(eventId)
     try {
-      await api.delete(`/api/events/${eventId}`)
+      // CENTRAL_ADMIN uses the admin force-delete endpoint (no restrictions)
+      const endpoint = isCentralAdmin
+        ? `/api/admin/events/${eventId}`
+        : `/api/events/${eventId}`
+      await api.delete(endpoint)
       setCreatedEvents(prev => prev.filter(ev => ev.id !== eventId))
       showToast({ message: 'Event cancelled successfully', type: 'success' })
     } catch (err) {
@@ -381,7 +387,7 @@ export default function Dashboard() {
                   const hasApprovedBooking = !!ev.hasApprovedBooking
                   const editable = start && (start.getTime() - now.getTime()) > 2 * 24 * 60 * 60 * 1000
                   const hasStarted = start && start.getTime() <= now.getTime()
-                  const canCancelEvent = !hasApprovedBooking && !!editable
+                  const canCancelEvent = isCentralAdmin || (!hasApprovedBooking && !!editable)
                   const isCancelling = cancellingId === ev.id
                   const isConfirming = confirmId === ev.id
                   return (
@@ -458,15 +464,15 @@ export default function Dashboard() {
                             type="button"
                             className="btn btn-sm"
                             style={{
-                              background: !canCancelEvent || hasStarted ? '#374151' : '#7F1D1D',
-                              color: !canCancelEvent || hasStarted ? '#6B7280' : '#FECACA',
+                              background: (!canCancelEvent || hasStarted) && !isCentralAdmin ? '#374151' : '#7F1D1D',
+                              color: (!canCancelEvent || hasStarted) && !isCentralAdmin ? '#6B7280' : '#FECACA',
                               borderRadius: '8px',
                               padding: '6px 12px',
-                              cursor: !canCancelEvent || hasStarted ? 'not-allowed' : 'pointer',
-                              opacity: !canCancelEvent || hasStarted ? 0.6 : 1,
+                              cursor: (!canCancelEvent || hasStarted) && !isCentralAdmin ? 'not-allowed' : 'pointer',
+                              opacity: (!canCancelEvent || hasStarted) && !isCentralAdmin ? 0.6 : 1,
                               transition: 'all 0.2s ease',
                             }}
-                            disabled={!canCancelEvent || hasStarted}
+                            disabled={(!canCancelEvent || hasStarted) && !isCentralAdmin}
                             onClick={() => setConfirmId(ev.id)}
                             onMouseEnter={(e) => { if (canCancelEvent && !hasStarted) e.target.style.background = '#991B1B' }}
                             onMouseLeave={(e) => { if (canCancelEvent && !hasStarted) e.target.style.background = '#7F1D1D' }}

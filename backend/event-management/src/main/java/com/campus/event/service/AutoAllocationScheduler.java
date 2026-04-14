@@ -32,8 +32,9 @@ public class AutoAllocationScheduler {
     @Value("${app.allocations.auto.timeoutMinutes:120}")
     private int timeoutMinutes;
 
-    public AutoAllocationScheduler(RoomBookingRequestRepository requestRepo, RoomRepository roomRepo, RoomAvailabilityService availabilityService,
-                                   UserRepository userRepository, NotificationService notificationService) {
+    public AutoAllocationScheduler(RoomBookingRequestRepository requestRepo, RoomRepository roomRepo,
+            RoomAvailabilityService availabilityService,
+            UserRepository userRepository, NotificationService notificationService) {
         this.requestRepo = requestRepo;
         this.roomRepo = roomRepo;
         this.availabilityService = availabilityService;
@@ -44,16 +45,19 @@ public class AutoAllocationScheduler {
     // Run every 10 minutes
     @Scheduled(cron = "0 */10 * * * *")
     public void autoAllocatePending() {
-        if (!enabled) return;
+        if (!enabled)
+            return;
         LocalDateTime cutoff = LocalDateTime.now().minusMinutes(timeoutMinutes);
         List<RoomBookingRequest> pending = requestRepo.findPendingOlderThan(cutoff);
         for (RoomBookingRequest r : pending) {
             try {
                 LocalDateTime start = windowStart(r);
                 LocalDateTime end = windowEnd(r);
-                if (start == null || end == null || !end.isAfter(start)) continue;
+                if (start == null || end == null || !end.isAfter(start))
+                    continue;
                 Room allocated = tryPreferences(r, start, end);
-                if (allocated == null) allocated = tryAny(start, end);
+                if (allocated == null)
+                    allocated = tryAny(start, end);
                 if (allocated != null) {
                     r.setAllocatedRoom(allocated);
                     r.setStatus(RoomBookingStatus.APPROVED);
@@ -63,7 +67,8 @@ public class AutoAllocationScheduler {
                     log.info("Auto-allocated request {} to room {}", r.getId(), allocated.getName());
                     if (r.getRequestedByUsername() != null) {
                         final String subj = "Room request auto-approved";
-                        final String msg = "Your room request (ID " + r.getId() + ") has been auto-approved for room '" + allocated.getName() + "'.";
+                        final String msg = "Your room request (ID " + r.getId() + ") has been auto-approved for room '"
+                                + allocated.getName() + "'.";
                         userRepository.findByUsername(r.getRequestedByUsername())
                                 .ifPresent(u -> notificationService.notifyAllChannels(u, subj, msg));
                     }
@@ -75,30 +80,35 @@ public class AutoAllocationScheduler {
     }
 
     private Room tryPreferences(RoomBookingRequest r, LocalDateTime start, LocalDateTime end) {
-        Room[] prefs = new Room[]{r.getPref1(), r.getPref2(), r.getPref3()};
+        Room[] prefs = new Room[] { r.getPref1(), r.getPref2(), r.getPref3() };
         for (Room pref : prefs) {
-            if (pref == null) continue;
-            if (availabilityService.isRoomAvailable(pref.getId(), start, end)) return pref;
+            if (pref == null)
+                continue;
+            if (availabilityService.isRoomAvailable(pref.getId(), start, end))
+                return pref;
         }
         return null;
     }
 
     private Room tryAny(LocalDateTime start, LocalDateTime end) {
         for (Room room : roomRepo.findAll()) {
-            if (availabilityService.isRoomAvailable(room.getId(), start, end)) return room;
+            if (availabilityService.isRoomAvailable(room.getId(), start, end))
+                return room;
         }
         return null;
     }
 
     private static LocalDateTime windowStart(RoomBookingRequest r) {
         Event e = r.getEvent();
-        if (e != null && e.getStartTime() != null) return e.getStartTime();
+        if (e != null && e.getStartTime() != null)
+            return e.getStartTime();
         return r.getMeetingStart();
     }
 
     private static LocalDateTime windowEnd(RoomBookingRequest r) {
         Event e = r.getEvent();
-        if (e != null && e.getEndTime() != null) return e.getEndTime();
+        if (e != null && e.getEndTime() != null)
+            return e.getEndTime();
         return r.getMeetingEnd();
     }
-}
+}

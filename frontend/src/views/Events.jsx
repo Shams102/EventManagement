@@ -16,8 +16,30 @@ export default function Events() {
   const [registeredEventIds, setRegisteredEventIds] = useState(() => new Set())
   const [selectedEvent, setSelectedEvent] = useState(null)
   const [eventAllocations, setEventAllocations] = useState({})
+  const [cancellingId, setCancellingId] = useState(null)
+  const [confirmCancelId, setConfirmCancelId] = useState(null)
   const { hasRole, clubId, user } = useAuth()
   const navigate = useNavigate()
+  const isCentralAdmin = hasRole('CENTRAL_ADMIN')
+
+  const handleAdminCancelEvent = async (eventId) => {
+    setCancellingId(eventId)
+    try {
+      await api.delete(`/api/admin/events/${eventId}`)
+      setEventList(prev => prev.filter(ev => ev.id !== eventId))
+      setEvents(prev => prev.filter(ev => String(ev.id) !== String(eventId)))
+      setEventAllocations(prev => { const copy = { ...prev }; delete copy[Number(eventId)]; return copy })
+      showToast({ message: 'Event cancelled successfully', type: 'success' })
+    } catch (err) {
+      const data = err.response?.data
+      const msg = (data && (data.error || data.message)) ? (data.error || data.message)
+        : (typeof data === 'string' ? data : 'Failed to cancel event')
+      showToast({ message: msg, type: 'error' })
+    } finally {
+      setCancellingId(null)
+      setConfirmCancelId(null)
+    }
+  }
 
   useEffect(() => {
     api.get('/api/public/events').then(async (res) => {
@@ -328,6 +350,59 @@ export default function Events() {
                       Registration not available
                     </button>
                   )
+                )}
+
+                {/* CENTRAL_ADMIN: Cancel Event */}
+                {isCentralAdmin && (
+                  <div className="mt-2">
+                    {confirmCancelId === event.id ? (
+                      <div className="p-3 rounded-lg border border-[#991B1B]/40" style={{ background: 'rgba(127,29,29,0.15)' }}>
+                        <p className="text-sm text-[#FECACA] mb-3">Are you sure you want to cancel this event? This cannot be undone.</p>
+                        <div className="flex gap-2">
+                          <button
+                            type="button"
+                            className="btn btn-sm"
+                            style={{ background: 'transparent', border: '1px solid #374151', color: '#D1D5DB' }}
+                            onClick={() => setConfirmCancelId(null)}
+                            disabled={cancellingId === event.id}
+                          >
+                            Go Back
+                          </button>
+                          <button
+                            type="button"
+                            className="btn btn-sm"
+                            style={{ background: '#991B1B', color: '#FECACA', borderRadius: '8px' }}
+                            onClick={() => handleAdminCancelEvent(event.id)}
+                            disabled={cancellingId === event.id}
+                          >
+                            {cancellingId === event.id ? (
+                              <span className="flex items-center gap-2">
+                                <span className="spinner" style={{ width: 14, height: 14, borderWidth: 2 }}></span>
+                                Cancelling...
+                              </span>
+                            ) : 'Confirm Cancel'}
+                          </button>
+                        </div>
+                      </div>
+                    ) : (
+                      <button
+                        type="button"
+                        className="btn btn-sm w-full"
+                        style={{
+                          background: '#7F1D1D',
+                          color: '#FECACA',
+                          borderRadius: '8px',
+                          padding: '6px 12px',
+                          transition: 'all 0.2s ease',
+                        }}
+                        onClick={() => setConfirmCancelId(event.id)}
+                        onMouseEnter={(e) => e.target.style.background = '#991B1B'}
+                        onMouseLeave={(e) => e.target.style.background = '#7F1D1D'}
+                      >
+                        Cancel Event
+                      </button>
+                    )}
+                  </div>
                 )}
               </div>
             ))}
