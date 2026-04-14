@@ -125,8 +125,8 @@ class EventControllerIntegrationTest {
                 """.formatted(
                 title,
                 description,
-                java.time.LocalDateTime.now().plusDays(10).toString(),
-                java.time.LocalDateTime.now().plusDays(10).plusHours(2).toString(),
+                java.time.LocalDateTime.of(2026, 4, 24, 10, 0).toString(),
+                java.time.LocalDateTime.of(2026, 4, 24, 12, 0).toString(),
                 testBuildingId,
                 location
         );
@@ -157,8 +157,8 @@ class EventControllerIntegrationTest {
                     "location": "Room 101"
                 }
                 """.formatted(
-                java.time.LocalDateTime.now().plusDays(10).toString(),
-                java.time.LocalDateTime.now().plusDays(10).plusHours(2).toString()
+                java.time.LocalDateTime.of(2026, 4, 24, 10, 0).toString(),
+                java.time.LocalDateTime.of(2026, 4, 24, 12, 0).toString()
         );
 
         mockMvc.perform(post("/api/events")
